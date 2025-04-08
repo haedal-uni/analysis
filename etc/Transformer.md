@@ -14,10 +14,22 @@ Transformer는 과거 가격 중 중요한 부분에 **주의(attention)** 를 �
 <br><br><br>
 
 ## Transformer의 핵심
+| 구성 요소 | 설명 📝 |
+| --- | --- |
+| `Embedding` | 숫자로 된 데이터를 Transformer가 이해하기 쉽게 바꿔줌 |
+| `Multi-Head Attention` | 여러 방향에서 정보를 동시에 바라봄 (중요한 정보에 집중!) |
+| `Feed Forward` | 뇌처럼 계산을 함 |
+| `Positional Encoding` | 시계열 데이터라서 **순서 정보**가 중요! 순서를 기억하게 해줌 |
+| `Decoder` | 미래 값을 예측하는 뇌 |
 
 <br><br><br>
 
 ## Transformer는 언제 사용?
+| 사용 상황 | 예시 |
+| --- | --- |
+| 시계열 예측 | 주가, 온도, 판매량 예측 등 |
+| 자연어 처리 | 번역기, 챗봇 |
+| 음악 생성 | 시간 흐름을 고려해서 음표 예측 |
 
 <br><br><br>
 
@@ -40,10 +52,11 @@ scaler = MinMaxScaler()
 data_scaled = scaler.fit_transform(data)
 ```
 
-
-### 1. 데이터 불러오기 & 전처리
-
 ### 2. 시계열 데이터를 묶는 Dataset 클래스
+```
+src = 과거 50일
+tgt = 미래 10일
+```
 
 ### 3. Transformer 모델 구조
 ```py
@@ -65,7 +78,17 @@ smoothed_predictions = np.convolve(..., mode='valid')
 ```
 예측 결과가 울퉁불퉁할 수 있어서 부드럽게 다듬어요 (이걸 smoothing이라 한다).
 
+<br><br><br>
 
+## 용어 정리 
+| 용어 | 설명 |
+| --- | --- |
+| 시계열 | 시간이 흐름에 따라 생긴 데이터 (예: 주가, 날씨) |
+| Transformer | 주의 집중해서 미래를 예측하는 뇌 |
+| Embedding | 숫자를 더 이해하기 쉽게 바꿔줌 |
+| Decoder | 미래를 만들어내는 뇌 |
+| Teacher Forcing | 예측할 때 정답을 살짝 알려주는 방식 |
+| Smoothing | 예측 결과를 부드럽게 다듬기 |
 
 
 
