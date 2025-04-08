@@ -72,7 +72,7 @@ teacher_forcing_ratio = 0.2
 ```
 80%는 정답 없이 스스로 예측, 20% 확률로 정답을 힌트로 줘서 예측 훈련
 
-### 4. 예측 결과 보기
+### 5. 예측 결과 보기 
 ```py
 smoothed_predictions = np.convolve(..., mode='valid')
 ```
