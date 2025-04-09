@@ -257,16 +257,36 @@ class TimeSeriesTransformer(nn.Module):
 ### 4. 모델 학습 함수 (수정된 Loss Function 및 Teacher Forcing)
 ```py
 def train_model(model, train_loader, device, epochs, learning_rate=0.0005, teacher_forcing_ratio=0.2):
-    model.train()
+    model.train() # 모델을 훈련 모드로 설정한다. 모델이 학습을 할 준비가 되었다는 뜻
     criterion = nn.HuberLoss()  # Huber Loss로 변경
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = StepLR(optimizer, step_size=20, gamma=0.5)
+'''
+- criterion: 손실 함수다. 
 
+  모델이 예측한 값과 실제 값이 얼마나 차이가 나는지를 계산하는데 사용된다. 
+
+  여기서는 Huber Loss라는 방법을 사용한다. 
+
+  이는 예측값이 실제값과 크게 차이나면 더 큰 패널티를 주고 작으면 작은 패널티를 주는 방식이다.
+
+- optimizer: 모델의 가중치를 업데이트하는 방법이다. 여기서는 Adam optimizer를 사용한다.
+
+- scheduler: 학습률을 조정하는 도구다. 일정 에포크마다 학습률을 조정해 모델 학습을 더 잘 진행시킬 수 있도록 돕는다.
+'''
+
+   # for epoch in range(epochs): 모델을 주어진 에포크 수만큼 학습시킨다. epochs는 전체 학습 반복 횟수
     for epoch in range(epochs):
         epoch_loss = 0
         for src, tgt in train_loader:
             src = src.to(device)   # [batch, seq_length, input_dim]
             tgt = tgt.to(device)   # [batch, pred_length, input_dim]
+'''
+- train_loader: 훈련 데이터가 들어 있는 배치다. src는 입력 데이터, tgt는 목표 출력 데이터다.
+
+- to(device): 데이터가 GPU에서 실행될 수 있도록 전송한다. 만약 GPU가 없다면 CPU에서 실행
+'''
+
 
             src = src.transpose(0, 1)  # [seq_length, batch, input_dim]
             batch_size = src.size(1)
@@ -275,25 +295,63 @@ def train_model(model, train_loader, device, epochs, learning_rate=0.0005, teach
 
             # Teacher Forcing 결정
             use_teacher_forcing = True if np.random.rand() < teacher_forcing_ratio else False
+'''
+**teacher_forcing** 는 모델이 예측할 때 과거의 실제 값을 사용하는 방법이다.
+
+여기서 teacher_forcing_ratio 값에 따라서 True 또는 False가 결정된다.
+
+만약 True라면, 모델은 예측을 할 때 실제 데이터를 사용할 수 있도록 한다.
+'''
+
             if use_teacher_forcing:
                 start_token = torch.zeros(1, batch_size, input_dim).to(device)
                 tgt_transposed = tgt.transpose(0, 1)  # [pred_length, batch, input_dim]
                 decoder_input = torch.cat([start_token, tgt_transposed[:-1]], dim=0)
             else:
                 decoder_input = torch.zeros(pred_length, batch_size, input_dim).to(device)
+'''
+start_token: 모델이 처음 예측을 시작할 때 사용하는 시작 토큰이다.
+
+tgt_transposed[:-1]: 목표 데이터의 실제 값을 사용해서 디코더의 입력값을 만든다.
+
+decoder_input: 모델이 예측하는 데 필요한 입력 데이터다.     
+'''
+
 
             optimizer.zero_grad()
             output = model(src, decoder_input)  # [pred_length, batch, input_dim]
             loss = criterion(output, tgt.transpose(0, 1))
+'''
+optimizer.zero_grad(): 기존의 기울기(gradient)를 초기화한다.
+
+model(src, decoder_input): 모델을 사용해서 예측 결과를 생성한다.
+
+loss: 예측값과 실제값의 차이를 계산하여 손실값을 구한다.
+'''
+
+
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
+'''
+loss.backward(): 손실 값을 기반으로 기울기를 계산한다.
+
+optimizer.step(): 기울기를 바탕으로 모델의 가중치를 업데이트한다.
+
+epoch_loss: 이번 에포크 동안의 손실 값을 누적한다.
+'''
 
         scheduler.step()
         current_lr = scheduler.get_last_lr()[0]
         print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss / len(train_loader):.6f}, LR: {current_lr:.6f}")
+'''
+scheduler.step(): 학습률을 조정한다.
+
+current_lr: 현재 학습률을 출력한다.
+
+학습이 끝날 때마다 손실 값과 학습률을 출력한다.
+'''
 ```
-- `model.train()` : 모델을 훈련 모드로 설정한다. 모델이 학습을 할 준비가 되었다는 뜻
 
 
 ### 5. 미래 예측 (결과 Smoothing 추가)  
