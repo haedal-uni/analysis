@@ -172,23 +172,42 @@ class TimeSeriesDataset(Dataset):
         self.data = torch.tensor(data, dtype=torch.float32)
         self.seq_length = seq_length
         self.pred_length = pred_length
+'''
+data: 주식 데이터를 Tensor 형태로 변환한다. (Tensor는 PyTorch에서 데이터 구조다.)
 
-    def __len__(self):
+seq_length: 시퀀스 길이: 모델이 과거 몇 개의 데이터를 사용할지를 결정한다.  
+
+pred_length: 예측 길이: 모델이 예측하려는 미래 시점 수다.
+'''
+
+    def __len__(self): # 데이터셋의 길이를 반환하는데 seq_length와 pred_length를 고려해서 가능한 데이터 샘플의 수를 계산
         return len(self.data) - self.seq_length - self.pred_length + 1
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx): # __getitem__: 인덱스 idx에서 과거 데이터(src)와 미래 데이터(tgt)를 잘라내어 반환
         src = self.data[idx: idx+self.seq_length]
         tgt = self.data[idx+self.seq_length: idx+self.seq_length+self.pred_length]
         return src, tgt
+'''
+src: 예측할 과거 데이터를 의미한다. seq_length만큼 가져온다.
 
+tgt: 예측할 미래 데이터를 의미한다. pred_length만큼 가져온다.
+'''
+
+# 데이터를 배치 단위로 나누어 훈련할 수 있게 도와주는 DataLoader를 생성하는 함수 
 def create_dataloader(data, seq_length, pred_length, batch_size, shuffle=True):
     dataset = TimeSeriesDataset(data, seq_length, pred_length)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
     return loader
-```
-Dataset : PyTorch에서 데이터를 처리할 때 사용하는 클래스
+'''
+batch_size: 한 번에 처리할 데이터의 수
 
-TimeSeriesDataset : 시계열 데이터를 다루는 사용자 정의 클래스
+shuffle: 데이터를 섞을지 말지를 결정
+'''
+```
+- Dataset : PyTorch에서 데이터를 처리할 때 사용하는 클래스
+
+- TimeSeriesDataset : 시계열 데이터를 다루는 사용자 정의 클래스
+
 
 ### 3. Transformer 기반 시계열 예측 모델 정의 (멀티스텝 예측 지원)
 ```py
@@ -212,6 +231,28 @@ class TimeSeriesTransformer(nn.Module):
         output = self.transformer(src_emb, tgt_emb)  # [T, N, d_model]
         return self.fc_out(output)      # [T, N, input_dim]
 ```
+- nn.Module은 PyTorch에서 모든 모델의 기본 클래스
+
+- embedding: 입력 데이터를 d_model 차원으로 변환하는 선형 계층이다. (입력 차원 input_dim을 d_model 차원으로 매핑)
+
+<br>
+
+- transformer: Transformer 모델을 정의한다.
+
+  - nhead: Attention 헤드의 수
+
+  - num_layers: 인코더와 디코더의 층 수
+ 
+- fc_out: Transformer의 출력을 다시 원래의 입력 차원으로 변환하는 선형 계층이다.
+
+- forward: 입력 데이터 src와 tgt를 embedding을 통해 변환한다.
+
+- transformer는 과거 데이터(src)와 미래 데이터(tgt)를 처리하여 예측 결과를 출력한다.
+
+  그 후 `fc_out`을 통해 예측 결과를 원래의 차원으로 되돌린다.
+
+  
+<br><br>
 
 ### 4. 모델 학습 함수 (수정된 Loss Function 및 Teacher Forcing)
 ```py
@@ -252,6 +293,8 @@ def train_model(model, train_loader, device, epochs, learning_rate=0.0005, teach
         current_lr = scheduler.get_last_lr()[0]
         print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss / len(train_loader):.6f}, LR: {current_lr:.6f}")
 ```
+- `model.train()` : 모델을 훈련 모드로 설정한다. 모델이 학습을 할 준비가 되었다는 뜻
+
 
 ### 5. 미래 예측 (결과 Smoothing 추가)  
 ```py
