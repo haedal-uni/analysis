@@ -65,9 +65,9 @@ ex)
 2. 결측치 처리 및 문자열을 숫자로 변환 (예: 거래량, 변동%)
 3. 종가 그래프 시각화
 4. 정규화 (MinMaxScaler 사용)
-5. ✂Train/Test 데이터 분할
+5. Train/Test 데이터 분할
 6. 시퀀스 데이터로 학습용 입력 구성
-7. 🏗모델 정의 (Conv1D → LSTM → Dense)
+7. 모델 정의 (Conv1D → LSTM → Dense)
 8. 모델 훈련 (EarlyStopping & Checkpoint 사용)
 9. 예측 결과 시각화 및 해석
 
@@ -112,6 +112,8 @@ Y: 120
 | `learning rate` | 학습 속도 (예: 0.0005) |
 | `epochs`        | 학습 반복 횟수 |
 | `optimizer`     | 최적화 방법 (예: Adam) |
+
+WINDOW_SIZE = 20, BATCH_SIZE = 32 → 20개씩 묶은 샘플이 총 32개로 배치 단위로 모델에 전달된다
 
 ---
 
