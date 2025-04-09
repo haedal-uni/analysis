@@ -137,7 +137,7 @@ def load_and_preprocess_data(file_path, features=['종가', '거래량', '시가
     # 필요한 피처들만 선택
     data = df[features].values  # [num_samples, num_features]
     
-    # 데이터 전처리
+    # 데이터 정규화: 값을 0~1 사이로 바꿔서 모델이 더 잘 학습하게 만듦
     scaler = MinMaxScaler(feature_range=(0, 1))
     data_scaled = scaler.fit_transform(data)
     
@@ -188,9 +188,9 @@ pred_length: 예측 길이: 모델이 예측하려는 미래 시점 수다.
         tgt = self.data[idx+self.seq_length: idx+self.seq_length+self.pred_length]
         return src, tgt
 '''
-src: 예측할 과거 데이터를 의미한다. seq_length만큼 가져온다.
+src(입력): 예측에 쓸 과거 데이터. seq_length만큼 가져온다.
 
-tgt: 예측할 미래 데이터를 의미한다. pred_length만큼 가져온다.
+tgt(정답): 예측하려는 미래 데이터. pred_length만큼 가져온다.  
 '''
 
 # 데이터를 배치 단위로 나누어 훈련할 수 있게 도와주는 DataLoader를 생성하는 함수 
@@ -207,6 +207,31 @@ shuffle: 데이터를 섞을지 말지를 결정
 - Dataset : PyTorch에서 데이터를 처리할 때 사용하는 클래스
 
 - TimeSeriesDataset : 시계열 데이터를 다루는 사용자 정의 클래스
+
+위에서 만든 Dataset을 PyTorch의 DataLoader로 바꿔줌
+
+이렇게 하면 한 번에 여러 개의 데이터 묶음(batch) 으로 모델에 넣을 수 있어서 더 효율적이다. 
+
+
+- `TimeSeriesDataset` 클래스:
+
+- `data`: 주식 데이터를 PyTorch의 Tensor 형태로 변환한다.
+
+- `seq_length`: 모델이 한 번에 볼 과거 데이터의 길이다.
+
+- `pred_length`: 모델이 예측할 미래 데이터의 길이다.
+
+- `__len__`: 전체 데이터에서 가능한 (과거, 미래) 데이터 쌍의 수를 반환한다.
+
+- `__getitem__`: 주어진 인덱스에서 과거 데이터(src)와 미래 데이터(tgt)를 추출하여 반환한다.
+
+- `create_dataloader` 함수
+
+  - `TimeSeriesDataset`을 사용하여 데이터셋을 만들고 이를 DataLoader로 감싸서 배치 단위로 데이터를 제공할 수 있게 한다.
+
+  - `batch_size`: 한 번에 모델에 입력될 데이터의 수다.
+
+  - `shuffle`: 데이터를 섞을지 여부를 결정한다.
 
 
 ### 3. Transformer 기반 시계열 예측 모델 정의 (멀티스텝 예측 지원)
@@ -231,27 +256,40 @@ class TimeSeriesTransformer(nn.Module):
         output = self.transformer(src_emb, tgt_emb)  # [T, N, d_model]
         return self.fc_out(output)      # [T, N, input_dim]
 ```
-- nn.Module은 PyTorch에서 모든 모델의 기본 클래스
+- embedding: 숫자 데이터를 Transformer가 이해할 수 있는 형태로 바꿔줌
 
-- embedding: 입력 데이터를 d_model 차원으로 변환하는 선형 계층이다. (입력 차원 input_dim을 d_model 차원으로 매핑)
+- transformer: 실제로 예측을 수행하는 핵심 부분
+
+- fc_out: Transformer의 출력을 다시 원래 차원으로 바꿔줌
+
+- forward: 모델이 동작하는 과정 (입력 → 예측 → 출력)
 
 <br>
 
-- transformer: Transformer 모델을 정의한다.
+- TimeSeriesTransformer 클래스  
 
-  - nhead: Attention 헤드의 수
+  - embedding: 입력 데이터를 d_model 차원으로 변환하는 선형 계층
 
-  - num_layers: 인코더와 디코더의 층 수
- 
-- fc_out: Transformer의 출력을 다시 원래의 입력 차원으로 변환하는 선형 계층이다.
+  - transformer: Transformer 모델 자체로, 여러 개의 인코더와 디코더 층으로 구성
 
-- forward: 입력 데이터 src와 tgt를 embedding을 통해 변환한다.
+    - d_model: 각 단어(또는 특징)의 임베딩 차원
 
-- transformer는 과거 데이터(src)와 미래 데이터(tgt)를 처리하여 예측 결과를 출력한다.
+    - nhead: 멀티헤드 어텐션에서의 헤드 수
 
-  그 후 `fc_out`을 통해 예측 결과를 원래의 차원으로 되돌린다.
+    - num_layers: 인코더와 디코더의 층 수
 
-  
+    - dropout: 드롭아웃 비율로, 과적합을 방지하기 위해 일부 뉴런을 무작위로 제외
+
+  - fc_out: Transformer의 출력을 원래의 입력 차원으로 변환하는 선형 계층
+
+- forward 메서드:
+
+  - src: 과거 데이터
+
+  - tgt: 미래에 대한 예측을 위한 입력
+
+  - src_emb와 tgt_emb로 임베딩한 후 Transformer를 통해 예측을 수행하고 최종 출력을 반환
+
 <br><br>
 
 ### 4. 모델 학습 함수 (수정된 Loss Function 및 Teacher Forcing)
@@ -352,6 +390,13 @@ current_lr: 현재 학습률을 출력한다.
 학습이 끝날 때마다 손실 값과 학습률을 출력한다.
 '''
 ```
+- criterion: 예측이 얼마나 정확한지 판단하는 기준 (손실 함수)
+
+- optimizer: 모델이 더 똑똑해지도록 도와주는 수학적인 방법
+
+- scheduler: 학습이 잘 되도록 조절하는 학습률 조정기
+
+- Teacher Forcing: 모델이 처음엔 정답을 참고해서 연습하는 방법
 
 
 ### 5. 미래 예측 (결과 Smoothing 추가)  
