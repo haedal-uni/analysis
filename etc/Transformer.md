@@ -120,26 +120,52 @@ smoothed_predictions = np.convolve(..., mode='valid')
 
 ---
 
+## 코드 실행
+Transformer 모델은 과거 데이터를 바탕으로 미래 값을 예측하는 데 유용해서 종가 가격 예측으로 사용했다
+
+
 ### 1. 데이터 로딩 및 전처리
 ```py
-def load_and_preprocess_data(ticker, start_date, end_date, features=['종가', '거래량', '시가', '고가', '저가'], split_ratio=0.8):
-    df = yf.download(ticker, start=start_date, end=end_date)
+# 데이터 로드 및 전처리 함수 수정
+def load_and_preprocess_data(file_path, features=['종가', '거래량', '시가', '고가', '저가'], split_ratio=0.8):
+    # CSV 파일 로드 (이미 존재하는 데이터)
+    df = pd.read_csv(file_path, parse_dates=['날짜'], index_col="날짜", thousands=",")
+    
+    # 거래량 컬럼 처리 (단위가 'K'로 표시된 경우 1000을 곱해줌)
+    df['거래량'] = df['거래량'].apply(lambda x: float(x.replace('K', '')) * 1000 if isinstance(x, str) and 'K' in x else float(x))
+    
+    # 필요한 피처들만 선택
     data = df[features].values  # [num_samples, num_features]
-    print(f"Data Sample: {data[:5]}")
-    print(f"Data Shape: {data.shape}")
-
+    
+    # 데이터 전처리
     scaler = MinMaxScaler(feature_range=(0, 1))
     data_scaled = scaler.fit_transform(data)
+    
+    # 훈련/테스트 데이터 분리
     split_idx = int(len(data_scaled) * split_ratio)
     train_data = data_scaled[:split_idx]
     test_data = data_scaled[split_idx:]
+    
+    print(f"Data Sample: {data[:5]}")
+    print(f"Data Shape: {data.shape}")
     print(f"Train Data Shape: {train_data.shape}")
     print(f"Test Data Shape: {test_data.shape}")
-
+    
     return train_data, test_data, scaler
 ```
+- `load_and_preprocess_data` : 주식 데이터를 다운로드하고 데이터를 정규화한 후 훈련 데이터와 테스트 데이터를 분할하는 함수
 
+  - ticker: 주식 종목 코드 (예: "AAPL"은 애플 주식)
+
+  - start_date, end_date: 주식 데이터를 가져올 시작 날짜와 종료 날짜
+
+  - features: 사용할 주식 지표 (종가, 거래량 등)
+
+  - split_ratio: 훈련 데이터와 테스트 데이터로 나눌 비율 (기본값은 80%)
+  
 ### 2. Dataset 및 DataLoader 구성 (멀티스텝 예측 버전)
+이 클래스는 주식 시계열 데이터를 배치로 나누어 훈련에 사용할 수 있게 만드는 역할을 한다.
+
 ```py
 class TimeSeriesDataset(Dataset):
     def __init__(self, data, seq_length, pred_length):
@@ -160,6 +186,9 @@ def create_dataloader(data, seq_length, pred_length, batch_size, shuffle=True):
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
     return loader
 ```
+Dataset : PyTorch에서 데이터를 처리할 때 사용하는 클래스
+
+TimeSeriesDataset : 시계열 데이터를 다루는 사용자 정의 클래스
 
 ### 3. Transformer 기반 시계열 예측 모델 정의 (멀티스텝 예측 지원)
 ```py
@@ -273,22 +302,69 @@ def plot_predictions(actual, predictions, smoothed_predictions, seq_length):
 
 ### 7. 메인 실행 함수
 ```py
+import torch
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+
+# 데이터 로드 및 전처리 함수
+def load_and_preprocess_data(file_path, features=['종가', '거래량', '시가', '고가', '저가'], split_ratio=0.8):
+    # CSV 파일 로드 (이미 존재하는 데이터)
+    df = pd.read_csv(file_path, parse_dates=['날짜'], index_col="날짜", thousands=",")
+    
+    # 거래량 컬럼 처리 (단위가 'K'로 표시된 경우 1000을 곱해줌)
+    df['거래량'] = df['거래량'].apply(lambda x: float(x.replace('K', '')) * 1000 if isinstance(x, str) and 'K' in x else float(x))
+    
+    # 필요한 피처들만 선택
+    data = df[features].values  # [num_samples, num_features]
+    
+    # 데이터 전처리
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    data_scaled = scaler.fit_transform(data)
+    
+    # 훈련/테스트 데이터 분리
+    split_idx = int(len(data_scaled) * split_ratio)
+    train_data = data_scaled[:split_idx]
+    test_data = data_scaled[split_idx:]
+    
+    print(f"Data Sample: {data[:5]}")
+    print(f"Data Shape: {data.shape}")
+    print(f"Train Data Shape: {train_data.shape}")
+    print(f"Test Data Shape: {test_data.shape}")
+    
+    return train_data, test_data, scaler
+
+# DataLoader 생성 함수 (미리 정의되어 있어야 합니다)
+def create_dataloader(data, seq_length, pred_length, batch_size):
+    # 데이터 로더를 생성하는 로직 (여기서는 예시로 작성)
+    pass
+
+# 모델 학습 함수 (미리 정의되어 있어야 합니다)
+def train_model(model, train_loader, device, epochs, learning_rate=0.0005, teacher_forcing_ratio=0.2):
+    pass
+
+# 예측 함수 (미리 정의되어 있어야 합니다)
+def predict_future(model, test_data, seq_length, pred_length, total_predictions, device, smooth_window=5):
+    pass
+
+# 결과 시각화 함수 (미리 정의되어 있어야 합니다)
+def plot_predictions(actual_test, predictions_inverse, smoothed_predictions, seq_length):
+    pass
+
+# 메인 실행 함수
 def main():
     # 설정값
-    ticker = "TSLA"
-    start_date = "2015-01-01"
-    end_date = "2025-04-08"
-    seq_length = 60
-    pred_length = 10
-    batch_size = 32
-    epochs = 100
-    total_predictions = 200
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    file_path = "미국 철강 코일 선물 과거 데이터.csv"  # CSV 파일 경로
+    seq_length = 60  # 시퀀스 길이
+    pred_length = 10  # 예측 길이
+    batch_size = 32  # 배치 크기
+    epochs = 100  # 학습 에포크 수
+    total_predictions = 200  # 예측할 총 값
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # GPU가 있으면 GPU 사용
 
     # 데이터 로딩 및 전처리
     train_data, test_data, scaler = load_and_preprocess_data(
-        ticker, start_date, end_date,
-        features=['Close', 'Volume', 'Open', 'High', 'Low'],
+        file_path,
+        features=['종가', '거래량', '시가', '고가', '저가'],
         split_ratio=0.8
     )
 
@@ -311,3 +387,4 @@ def main():
     # 결과 시각화
     plot_predictions(actual_test, predictions_inverse, smoothed_predictions, seq_length)
 ```
+
