@@ -479,20 +479,20 @@ def load_and_preprocess_data(file_path, features=['종가', '거래량', '시가
     
     return train_data, test_data, scaler
 
-# DataLoader 생성 함수 (미리 정의되어 있어야 합니다)
+# DataLoader 생성 함수 (미리 정의되어 있어야 한다)
 def create_dataloader(data, seq_length, pred_length, batch_size):
     # 데이터 로더를 생성하는 로직 (여기서는 예시로 작성)
     pass
 
-# 모델 학습 함수 (미리 정의되어 있어야 합니다)
+# 모델 학습 함수 (미리 정의되어 있어야 한다)
 def train_model(model, train_loader, device, epochs, learning_rate=0.0005, teacher_forcing_ratio=0.2):
     pass
 
-# 예측 함수 (미리 정의되어 있어야 합니다)
+# 예측 함수 (미리 정의되어 있어야 한다)
 def predict_future(model, test_data, seq_length, pred_length, total_predictions, device, smooth_window=5):
     pass
 
-# 결과 시각화 함수 (미리 정의되어 있어야 합니다)
+# 결과 시각화 함수 (미리 정의되어 있어야 한다)
 def plot_predictions(actual_test, predictions_inverse, smoothed_predictions, seq_length):
     pass
 
@@ -534,3 +534,385 @@ def main():
     plot_predictions(actual_test, predictions_inverse, smoothed_predictions, seq_length)
 ```
 
+<br><br><br><br>
+
+```py
+import torch  # PyTorch 사용
+import torch.nn as nn  # 신경망 관련 모듈
+import torch.optim as optim  # 최적화 알고리즘
+from torch.optim.lr_scheduler import StepLR  # 학습률 스케줄러
+from torch.utils.data import DataLoader, Dataset  # 데이터셋과 로더
+import numpy as np  # 수치 계산용
+import matplotlib.pyplot as plt  # 시각화용
+import yfinance as yf  # 주식 데이터 다운로드용 (이 코드에선 실제로 안 쓰임)
+from sklearn.preprocessing import MinMaxScaler  # 정규화 도구
+import pandas as pd  # 데이터프레임 사용을 위한 pandas
+
+# 1. 데이터 로딩 및 전처리
+# CSV 파일에서 데이터를 불러오고 결측값 제거 및 스케일링 수행
+def load_and_preprocess_data(ticker, features=['종가', '거래량', '시가', '고가', '저가'], split_ratio=0.8):
+    df = pd.read_csv('미국 철강 코일 선물 과거 데이터.csv', parse_dates=['날짜'], index_col="날짜", thousands=",")  # csv 파일 불러오기
+    df.dropna(inplace=True)  # 결측값 제거
+    df['거래량'] = df['거래량'].apply(lambda x: float(x.replace('K', '')) * 1000 if isinstance(x, str) and 'K' in x else float(x))  # 거래량 단위 처리
+    data = df[features].values  # 입력 피처만 추출
+    print(f"Data Sample: {data[:5]}")
+    print(f"Data Shape: {data.shape}")
+
+    scaler = MinMaxScaler(feature_range=(0, 1))  # 0~1 사이로 정규화(0~1 사이로 숫자를 바꾸는 도구 준비 (정규화))
+    data_scaled = scaler.fit_transform(data)  # 정규화 적용(학습과 스케일링을 한 번에 적용) 
+    split_idx = int(len(data_scaled) * split_ratio)  # 학습/테스트 분할 인덱스
+    train_data = data_scaled[:split_idx]  # 학습 데이터
+    test_data = data_scaled[split_idx:]  # 테스트 데이터
+    print(f"Train Data Shape: {train_data.shape}")
+    print(f"Test Data Shape: {test_data.shape}")
+
+    return train_data, test_data, scaler
+
+
+# 2. 시계열 Dataset 정의
+# 시계열 데이터를 (입력 시퀀스, 예측 대상 시퀀스) 쌍으로 나누는 Dataset 정의
+class TimeSeriesDataset(Dataset): # 시계열 예측을 위한 Transformer 모델을 정의  
+    def __init__(self, data, seq_length, pred_length):
+    # data: 전체 데이터 / seq_length: 입력할 시점 개수 / pred_length: 예측할 시점 개수
+
+        self.data = torch.tensor(data, dtype=torch.float32)  # 넘파이 데이터를 PyTorch 텐서로 변환
+        self.seq_length = seq_length  # 입력 시퀀스 길이(과거를 몇 개 보고 예측할지)  
+        self.pred_length = pred_length  # 예측 시퀀스 길이(미래를 몇 개 예측할지)  
+'''
+텐서(tensor) : 숫자 묶음
+
+1차원: 리스트 (예: [1, 2, 3])
+2차원: 행렬 (예: 엑셀 표처럼)
+3차원 이상: 여러 개의 표가 쌓인 구조
+
+→ 머신러닝 모델은 숫자를 입력받아 계산을 하기 때문에
+넘파이 배열을 PyTorch가 계산할 수 있는 Tensor(텐서) 형식으로 바꿈
+''''
+
+
+
+
+    def __len__(self): # 전체 데이터에서 시계열 순서를 고려해 만들 수 있는 총 샘플 수를 계산 
+        return len(self.data) - self.seq_length - self.pred_length + 1  # 전체 가능한 (입력, 출력) 쌍의 수
+'''
+전체 데이터에서 만들 수 있는 (입력, 정답) 쌍의 수를 계산
+데이터가 100개. 과거 7개 보고 미래 3개 예측 → 맨 앞부터 슬라이딩하면서 쌍을 만들면
+(0~6 → 7~9), (1~7 → 8~10), ..., (89~95 → 96~98) → 총 100 - 7 - 3 + 1 = 91개의 샘플 생성 가능
+'''
+
+
+    def __getitem__(self, idx): # 입력 시퀀스(src)와 정답(tgt)을 잘라서 반환
+        src = self.data[idx: idx+self.seq_length]  # 입력 구간
+        tgt = self.data[idx+self.seq_length: idx+self.seq_length+self.pred_length]  # 예측 대상 구간
+        return src, tgt
+
+
+
+# DataLoader 생성 함수
+def create_dataloader(data, seq_length, pred_length, batch_size, shuffle=True):
+    dataset = TimeSeriesDataset(data, seq_length, pred_length)  # Dataset 객체 생성
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)  # DataLoader로 묶기
+    # 데이터셋을 배치 단위로 묶어서 쉽게 모델에 넣을 수 있도록 만듦
+    return loader
+
+
+# 3. Transformer 모델 정의
+# 시계열 예측용 Transformer 구조 정의 (입력 시퀀스 → 출력 시퀀스)
+class TimeSeriesTransformer(nn.Module):
+    def __init__(self, input_dim, d_model, nhead, num_layers, dropout=0.1):
+'''
+input_dim: 입력 변수 개수, d_model: 내부 계산용 차원
+nhead: 여러 시점 정보 동시에 보는 눈(멀티헤드 어텐션), num_layers: Transformer 층 개수
+
+하나의 문장/데이터를 여러 "시선"으로 해석 → nhead = 4  # 예시: 4개의 시점을 동시에 바라봄
+나는 사과를 먹었다" → 어떤 시선은 '사과'에 집중, 다른 시선은 '먹었다'에 집중
+'''
+
+        super(TimeSeriesTransformer, self).__init__() # 부모 클래스 초기화 
+        self.embedding = nn.Linear(input_dim, d_model)  # 입력 차원 → 모델 차원(입력 데이터를 Transformer가 이해할 수 있도록 차원을 늘려줌)       
+        self.transformer = nn.Transformer( # 인코더-디코더 구조로 시계열을 처리
+            d_model=d_model,  # 모델 차원 수
+            nhead=nhead,  # 멀티헤드 어텐션의 헤드 수
+            num_encoder_layers=num_layers,  # 인코더 층 수
+            num_decoder_layers=num_layers,  # 디코더 층 수
+            dropout=dropout  # 드롭아웃 비율
+        )
+        self.fc_out = nn.Linear(d_model, input_dim)  # 모델 차원 → 원래 입력 차원으로 복원
+'''
+Transformer의 특징
+
+인코더: 과거 입력을 처리
+디코더: 예측해야 할 미래를 생성
+멀티헤드 어텐션으로 여러 시점을 동시에 봄
+순서 상관없이 전체 문맥을 한꺼번에 고려 가능 (RNN보다 빠름)
+'''
+
+
+    def forward(self, src, tgt): # src: 과거 데이터, tgt: 예측에 사용할 입력
+       # 둘 다 Transformer가 이해할 수 있게 차원을 늘려 줌 
+        src_emb = self.embedding(src)  # 입력 시퀀스 임베딩
+        tgt_emb = self.embedding(tgt)  # 디코더 입력 임베딩
+
+        output = self.transformer(src_emb, tgt_emb)  # Transformer 통과(Transformer가 입력을 받아서 미래를 예측) 
+        return self.fc_out(output)  # 예측 결과 생성(예측 결과를 원래 크기로 바꿔서 반환) 
+'''
+임베딩이란 : 숫자 하나하나를 더 풍부한 정보로 바꿔주는 것
+10이라는 숫자 하나 → [0.3, -0.5, 1.2] 이런 3차원 벡터로 바꿔줌 → 모델이 더 많은 의미를 이해할 수 있게 도와줌
+'''
+
+
+# 4. 모델 학습 함수 정의
+# teacher forcing 사용 및 Huber Loss 적용
+def train_model(model, train_loader, device, epochs, learning_rate=0.0005, teacher_forcing_ratio=0.2):
+    model.train()  # 학습 모드 설정
+    criterion = nn.HuberLoss()  # 손실 함수로 Huber Loss 사용(이상치에 덜 민감한 손실 함수)     
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)  # Adam 옵티마이저(모델의 가중치를 업데이트하는 알고리즘)
+    scheduler = StepLR(optimizer, step_size=20, gamma=0.5)  # 20번 마다 학습률 절반 감소
+
+    for epoch in range(epochs):
+        epoch_loss = 0
+        for src, tgt in train_loader:
+            src = src.to(device)
+            tgt = tgt.to(device)
+
+            # Transformer는 [시간, 배치, 특성] 순서의 입력을 받는다. 
+            src = src.transpose(0, 1)  # (batch, seq, dim) → (seq, batch, dim)
+           
+
+            batch_size = src.size(1)
+            input_dim = src.size(2)
+            pred_length = tgt.size(1)
+
+           # 정답을 일부러 모델에 보여주고 예측 
+            use_teacher_forcing = True if np.random.rand() < teacher_forcing_ratio else False  # teacher forcing 여부
+'''
+Teacher Forcing(디코더 구조에서 자주 사용)  
+학습할 때 정답(tgt) 을 디코더에게 직접 보여주는 전략
+처음에는 모델이 틀릴 확률이 높음 → 예측한 걸 다시 넣으면 점점 엉망
+그래서 정답을 넣어주면 훨씬 더 빠르게 학습 가능
+'''
+
+            if use_teacher_forcing:
+                start_token = torch.zeros(1, batch_size, input_dim).to(device)
+                tgt_transposed = tgt.transpose(0, 1)
+                decoder_input = torch.cat([start_token, tgt_transposed[:-1]], dim=0)
+            else:
+                decoder_input = torch.zeros(pred_length, batch_size, input_dim).to(device)
+
+            optimizer.zero_grad()
+            output = model(src, decoder_input)  # 모델 예측(모델에 입력을 넣고 예측 결과를 받는다.) 
+            loss = criterion(output, tgt.transpose(0, 1))  # 손실 계산(예측 결과와 실제 정답을 비교)
+            loss.backward()  # 역전파
+            optimizer.step()  # 가중치 업데이트
+            epoch_loss += loss.item()
+
+        scheduler.step()  # 학습률 갱신
+        current_lr = scheduler.get_last_lr()[0]
+        print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss / len(train_loader):.6f}, LR: {current_lr:.6f}")
+
+
+# 5. 미래 데이터 예측 함수
+# 일정 구간 이후 예측, 예측 결과를 smoothing 처리함
+def predict_future(model, test_data, seq_length, pred_length, total_predictions, device, smooth_window=5): 
+    model.eval()  # 평가 모드
+    test_input = torch.tensor(test_data[:seq_length], dtype=torch.float32).to(device)  # 예측 시작용 입력 데이터(초기 입력 데이터) 
+    predictions = []
+    with torch.no_grad():
+        steps = total_predictions // pred_length
+        remainder = total_predictions % pred_length
+        for _ in range(steps): # 예측한 결과를 다음 입력으로 사용
+            src = test_input.unsqueeze(1)  # (seq, input_dim) → (seq, 1, input_dim)
+            decoder_input = torch.zeros(pred_length, 1, test_input.size(-1)).to(device)
+            out = model(src, decoder_input)
+            out = out.squeeze(1)  # (pred_length, input_dim)
+            predictions.append(out.cpu().numpy())
+            test_input = torch.cat([test_input[pred_length:], out], dim=0)  # 입력 갱신
+        if remainder > 0:
+            src = test_input.unsqueeze(1)
+            decoder_input = torch.zeros(remainder, 1, test_input.size(-1)).to(device)
+            out = model(src, decoder_input)
+            out = out.squeeze(1)
+            predictions.append(out.cpu().numpy())
+        predictions = np.concatenate(predictions, axis=0)  # 결과 병합
+
+    # 예측 결과를 부드럽게 만들기 위해 이동 평균 적용
+    smoothed_predictions = np.convolve(predictions[:, 0], np.ones(smooth_window)/smooth_window, mode='valid')
+    return predictions, smoothed_predictions
+
+
+# 6. 시각화 함수 정의
+# 예측 결과와 실제 값 비교 및 RMSE 표시
+def plot_predictions(actual, predictions, smoothed_predictions, seq_length):# 실제 주가와 예측 결과를 그래프로 보여주는 함수
+    from sklearn.metrics import mean_squared_error
+    rmse = np.sqrt(mean_squared_error(actual[seq_length:seq_length + len(predictions), 0], predictions[:, 0])) # 예측이 얼마나 잘됐는지 RMSE로 평가
+    plt.figure(figsize=(12,6))
+    plt.plot(actual[:, 0], label="Actual Close Price")
+    plt.plot(range(seq_length, seq_length + len(predictions)), predictions[:, 0], label="Predicted Close Price", linestyle="dashed")
+    plt.plot(range(seq_length, seq_length + len(smoothed_predictions)), smoothed_predictions, label="Smoothed Predictions", linestyle="dotted")
+    plt.xlabel("Time Step")
+    plt.ylabel("Price")
+    plt.title(f"Tesla Stock Price Prediction using Transformer (RMSE: {rmse:.2f})")
+    plt.legend()
+    plt.show()
+
+
+# 7. 전체 실행 메인 함수
+def main():
+    file_path = "미국 철강 코일 선물 과거 데이터.csv"  # 사용할 CSV 파일 경로
+    seq_length = 60  # 입력 시퀀스 길이
+    pred_length = 10  # 예측 시퀀스 길이
+    batch_size = 32  # 배치 사이즈
+    epochs = 200  # 학습 반복 수
+    total_predictions = 200  # 예측할 전체 시점 수
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # GPU 또는 CPU 선택
+
+    # 데이터 전처리
+    train_data, test_data, scaler = load_and_preprocess_data(
+        file_path,
+        features=['종가', '거래량', '시가', '고가', '저가'],
+        split_ratio=0.8
+    )
+
+    # 학습용 DataLoader 생성
+    train_loader = create_dataloader(train_data, seq_length, pred_length, batch_size)
+
+    # 모델 정의
+    model = TimeSeriesTransformer(input_dim=5, d_model=256, nhead=4, num_layers=4).to(device)
+
+    # 학습 시작
+    train_model(model, train_loader, device, epochs, learning_rate=0.0005, teacher_forcing_ratio=0.2)
+
+    # 예측 실행
+    predictions, smoothed_predictions = predict_future(
+        model, test_data, seq_length, pred_length, total_predictions, device, smooth_window=5
+    )
+    predictions_inverse = scaler.inverse_transform(predictions)  # 원래 값으로 복원
+    actual_test = scaler.inverse_transform(test_data)  # 테스트 데이터 복원
+
+    # 결과 시각화
+    plot_predictions(actual_test, predictions_inverse, smoothed_predictions, seq_length)
+
+if __name__ == "__main__":
+    main()
+```
+# Transformer 개념 정리 및 전체 흐름
+
+## 1. Transformer란?
+Transformer는 시계열, 자연어 처리(NLP) 등 다양한 분야에서 사용되는 딥러닝 모델로, **순차적인 데이터를 처리**할 수 있는 구조입니다. RNN이나 LSTM과 달리, 순서를 따라가며 계산하지 않고, **병렬로 처리**할 수 있다는 큰 장점이 있습니다.
+
+---
+
+## 2. 핵심 구성 요소
+
+### (1) Embedding
+- 입력 데이터를 일정한 차원(d_model)으로 확장시켜줌
+- 숫자(스칼라) → 벡터 형태로 표현
+- 예: 과거 주가 데이터(1차원)를 d_model=64짜리 벡터로 변환
+
+```py
+src_emb = self.embedding(src)
+tgt_emb = self.embedding(tgt)
+```
+
+### (2) Positional Encoding
+- Transformer는 순서를 모르기 때문에, 각 위치 정보를 따로 더해줌
+- 위치 정보 + 임베딩 = 실제 입력값
+
+### (3) Multi-head Attention (nhead)
+- 여러 "시점"을 동시에 보면서 관계 파악
+- 예: 주가의 어떤 시점이 미래에 큰 영향을 미칠지 찾는 것
+- nhead=4 → 4개의 독립된 시점 감지기
+
+### (4) Encoder-Decoder 구조
+#### Encoder:
+- 입력 시퀀스(과거 데이터)를 처리
+- 정보를 압축해 의미 벡터로 전달
+
+#### Decoder:
+- 예측해야 할 값을 단계별로 생성
+- 이전 예측값을 바탕으로 다음 값을 만들어냄
+- 일부러 정답을 함께 넣어 예측 정확도를 높이기도 함 (Teacher Forcing)
+
+```py
+output = self.transformer(src_emb, tgt_emb)
+```
+
+---
+
+## 3. 전체 흐름
+
+```plaintext
+1. 원본 데이터
+
+2. 시계열 샘플로 자르기 (입력, 정답)
+
+3. DataLoader로 배치 단위로 묶기
+
+4. Embedding → Positional Encoding
+
+5. Encoder - Decoder로 입력/출력 처리
+
+6. 예측 결과 계산 (Linear Layer)
+
+7. 손실(loss) 계산 → 역전파 → 파라미터 업데이트
+```
+
+---
+
+## 4. Scheduler
+
+```py
+scheduler = StepLR(optimizer, step_size=20, gamma=0.5)
+```
+
+- **의미**: 학습이 일정 횟수 지나면 학습률을 줄여서 안정적인 수렴을 유도
+- `step_size=20`: 20번 epoch 마다
+- `gamma=0.5`: 학습률을 절반으로 줄임
+- ❌ 학습 횟수를 줄이는 게 아님
+- ✅ 같은 횟수로 학습하되 **변화 폭을 줄이는 것** (속도를 천천히 줄임)
+
+---
+
+## 5. Decoder 구조란?
+Decoder는 “과거 요약 정보 + 지금까지 예측한 값”을 바탕으로 다음 값을 계속 생성하는 구조
+- Encoder가 만든 정보를 바탕으로 예측값을 생성하는 부분
+- Decoder는 다음 요소로 구성됨:
+  - 임베딩 + 위치 인코딩
+  - Self-attention (자기 자신 예측값 기반 예측)
+  - Cross-attention (인코더의 출력과 연결)
+  - Feedforward Network
+
+---
+
+## 6. Teacher Forcing
+
+```py
+use_teacher_forcing = True if np.random.rand() < teacher_forcing_ratio else False
+```
+
+- **정답을 일부러 모델에 입력으로 주는 것**
+- 장점: 초기 학습이 더 빠르고 안정적임
+- 단점: 테스트 때는 정답이 없으므로, 적절히 줄여야 함
+- Transformer만의 특징은 아님. 시퀀스 예측 모델에서 자주 사용됨
+
+---
+
+## 7. HuberLoss란?
+- 이상치에 덜 민감한 손실 함수
+- 작은 오차 → MSE처럼 계산
+- 큰 오차 → MAE처럼 선형 계산 (벌점 적음)
+- 결과적으로 **이상치의 영향력 줄이기** 위함
+
+---
+
+## 참고 용어 정리
+| 용어 | 설명 |
+|------|------|
+| d_model | 임베딩 차원 수 (예: 64, 128 등) |
+| nhead | 어텐션 헤드 수 (멀티헤드) |
+| seq_length | 입력 시퀀스 길이 |
+| pred_length | 예측해야 할 시퀀스 길이 |
+| batch_size | 한 번에 처리할 샘플 수 |
+| scheduler | 학습률을 조절하는 전략 (속도 조절기) |
+| Teacher Forcing | 예측 중 정답을 일부러 넣어줌 |
+| Decoder | 예측 결과를 생성하는 Transformer 구조 |
