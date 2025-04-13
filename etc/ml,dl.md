@@ -10,6 +10,8 @@
   
   시계열 데이터에서는 시간을 독립변수처럼 활용
 
+<br><br><br>
+
 ### 시계열 데이터 특징
 - **Abrupt Change** : 갑작스러운 변화가 있는지 확인
 - **Outliers** : 이상치가 존재하는지 확인
@@ -17,6 +19,8 @@
 - **Seasonality** : 일정 시간 주기마다 반복되는 패턴이 있는지 확인
 - **Constant Variance** : 분산이 일정한지 확인
 - **Long-run Cycle** : 장기간 주기의 순환이 있는지 확인
+
+<br><br><br>
 
 ---
 
@@ -30,6 +34,8 @@
 6. 평가: MAE, MSE, RMSE 등
 7. 미래 예측: 향후 데이터 예측
 
+<br><br><br>
+
 ---
 
 ## 3. 기본 개념 정리
@@ -37,6 +43,8 @@
 ### 정상성 (Stationarity)
 - 평균과 분산이 시간에 따라 일정한 데이터
 - 전통적인 시계열 모델에 꼭 필요함
+
+<br><br><br>
 
 ### 정상성 검정 방법
 - **ADF Test (Augmented Dickey-Fuller Test)**
@@ -48,14 +56,20 @@ result = adfuller(data)
 print(f'p-value: {result[1]}')
 ```
 
+<br><br><br>
+
 ### 로그 수익률 (Log Return)
 - 정의: 로그 수익률은 주가 등의 변화율을 로그로 변환한 것
 - 계산 공식: `log_return = log(today_price / yesterday_price)`
 - 이유: 변동성이 큰 데이터를 안정화시켜 모델 학습에 유리하게 만듦
 
+<br><br><br>
+
 ### 차분 (Differencing)
 - 정의: 시간 차이 데이터를 통해 추세 제거 → 정상성 확보
 - 계산 공식: `diff = data[t] - data[t-1]`
+
+<br><br><br>
 
 ---
 
@@ -73,6 +87,8 @@ print(f'p-value: {result[1]}')
 | GRU | 딥러닝 | LSTM보다 단순하지만 유사한 성능 |
 | Transformer | 딥러닝 | 순서와 상관관계 학습 가능 (attention 메커니즘 기반) |
 
+<br><br><br>
+
 ---
 
 ## 5. 모델 성능 평가 지표
@@ -84,6 +100,8 @@ print(f'p-value: {result[1]}')
 | RMSE | Root Mean Squared Error | 제곱 오차의 루트 (단위 복원) |
 | MAPE | Mean Absolute Percentage Error | 비율 기반 오차, 실제 값이 0에 가까우면 불안정 |
 | R^2 | 결정계수 | 1에 가까울수록 좋은 예측 |
+
+<br><br><br>
 
 ---
 
@@ -100,6 +118,8 @@ print(f'p-value: {result[1]}')
 | Overfitting | 훈련 데이터에만 지나치게 잘 맞추고 일반화가 안 되는 현상 |
 | Underfitting | 훈련 데이터조차 잘 예측하지 못하는 상태 |
 
+<br><br><br>
+
 ---
 
 ## 7. ACF / PACF 개념
@@ -109,6 +129,8 @@ print(f'p-value: {result[1]}')
 | ACF | Autocorrelation Function | 전체 시점 간 자기 상관 관계 |
 | PACF | Partial ACF | 직접적인 상관관계만 고려함 |
 
+<br><br><br>
+
 ### ACF / PACF 패턴 해석
 
 | ACF 패턴 | PACF 패턴 | 추천 모델 |
@@ -116,6 +138,8 @@ print(f'p-value: {result[1]}')
 | 천천히 감소 | 뚝 끊김 | AR 모델 |
 | 뚝 끊김 | 천천히 감소 | MA 모델 |
 | 둘 다 천천히 감소 | - | 비정상 데이터 가능성 |
+
+<br><br><br>
 
 ---
 
@@ -133,12 +157,16 @@ for log_return in predicted_log_returns:
 - `np.exp(log_return)`은 로그 수익률을 다시 가격 변화율로 바꾸는 함수임
 - 누적해서 다음 가격을 계산함
 
+<br><br><br>
+
 ---
 
 ## 9. PyTorch란?
 
 - **PyTorch**는 Python 기반의 딥러닝 프레임워크로, Facebook에서 개발함
 - 텐서 연산, 자동 미분, GPU 연산을 지원하며 딥러닝 모델 구현에 많이 사용됨
+
+<br><br><br>
 
 ---
 
@@ -154,12 +182,16 @@ self.model = nn.Sequential(
 ```
 - 여러 개의 fully connected layer로 구성된 기본 신경망 구조
 
+<br><br><br>
+
 ### RNN (순환 신경망)
 ```py
 self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
 self.fc = nn.Linear(hidden_size, output_size)
 ```
 - 이전 시점의 출력(hidden state)을 현재 시점 입력과 함께 사용
+
+<br><br><br>
 
 ### LSTM (장기기억 순환 신경망)
 ```py
@@ -168,6 +200,8 @@ self.fc = nn.Linear(hidden_size, output_size)
 ```
 - RNN 구조를 개선하여 장기 의존성(long-term dependency)을 잘 처리함
 - cell state와 gate 구조가 핵심
+
+<br><br><br>
 
 ---
 
@@ -185,6 +219,8 @@ for epoch in range(epochs):                          # epoch 수 만큼 반복
         optimizer.step()                             # optimizer로 가중치 갱신
         optimizer.zero_grad()                        # gradient 초기화
 ```
+
+<br><br><br>
 
 ---
 
