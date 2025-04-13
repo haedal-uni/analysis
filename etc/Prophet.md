@@ -11,6 +11,8 @@
   
 - 사용이 매우 간단하며, 기본 설정만으로도 좋은 예측 성능을 낼 수 있다.
 
+<br><br><br>
+
 ---
 
 #### Prophet 모델의 기본 개념
@@ -31,6 +33,8 @@ y(t) = g(t) + s(t) + h(t) + ε_t
 - **additive model** (가법 모델): 요소들을 단순히 더함 → 일반적인 시계열 데이터
   
 - **multiplicative model** (승법 모델): 요소들을 곱함 → 변화량이 점점 커지는 데이터에 적합
+
+<br><br><br>
 
 ---
 
@@ -56,6 +60,8 @@ df_train = df[df['날짜'] < '2025-01-01'][["날짜", "종가"]]
 df_train = df_train.rename(columns={"날짜": "ds", "종가": "y"})
 ```
 
+<br><br><br>
+
 ---
 
 #### Prophet 모델 설정 및 학습
@@ -72,6 +78,7 @@ m = Prophet(
 )
 m.fit(df_train)
 ```
+<br><br><br>
 
 ##### 주요 파라미터 설명:
 
@@ -82,6 +89,8 @@ m.fit(df_train)
 | `yearly_seasonality` | 연간 주기성 설정 |
 | `daily_seasonality` | 일일 주기성 설정 |
 | `seasonality_mode` | 계절성과 트렌드 결합 방식 (additive / multiplicative) |
+
+<br><br><br>
 
 ---
 
@@ -96,7 +105,9 @@ forecast = m.predict(future)
   
 - `predict`는 예측값(yhat), 예측 하한(yhat_lower), 예측 상한(yhat_upper)을 포함한 결과를 준다. 
 
----
+<br><br><br>
+
+---  
 
 #### 예측값과 실제값 시각화
 
@@ -119,6 +130,8 @@ plt.legend()
 plt.show()
 ```
 
+<br><br><br>
+
 ---
 
 #### 그래프 해설
@@ -129,6 +142,8 @@ plt.show()
 | **빨간 선** (`Actual`) | 실제로 관측된 종가 (2025년 이후) |
 | **검은 점** (`Historical`) | Prophet이 학습한 과거 데이터 |
 | **음영 구간** | 예측의 신뢰 구간 (`yhat_lower ~ yhat_upper`) |
+
+<br><br><br>
 
 ---
 
@@ -142,6 +157,8 @@ plt.show()
 | 4. 미래 생성 | `make_future_dataframe(periods=...)` |
 | 5. 예측 수행 | `predict(future)` |
 | 6. 결과 시각화 | `matplotlib`으로 시각화하여 성능 확인 |
+
+<br><br><br>
 
 ---
 
