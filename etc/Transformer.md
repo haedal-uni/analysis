@@ -11,6 +11,7 @@ ex. “내일 주식이 오를까?” 라는 질문을 한다면
 
 Transformer는 과거 가격 중 중요한 부분에 **주의(attention)** 를 집중해서 답을 해준다.
 
+<br><br>
 
 Transformer 모델은 주로 **자연어 처리(NLP)** 에서 활용되는 딥러닝 모델이지만 
 
@@ -18,6 +19,7 @@ Transformer 모델은 주로 **자연어 처리(NLP)** 에서 활용되는 딥�
 
 이 모델은 순차적인 데이터에서 중요한 정보를 추출하고 이를 바탕으로 다음 값을 예측하거나 출력을 생성하는 데 특화되어 있다.
 
+<br><br>
 
 **Transformer의 주요 특징**     
 
@@ -72,18 +74,22 @@ Transformer는 기존의 ARIMA나 LSTM과 같은 모델과 비교해도 더 길�
 7. 시각화한다 → 그래프 그려서 성능 보기
 ```
 
+<br><br><br>
+
 ### 1. 데이터 불러오기 & 전처리
 ```py
 df = yf.download(ticker, start=start_date, end=end_date)
 scaler = MinMaxScaler()
 data_scaled = scaler.fit_transform(data)
 ```
+<br><br><br>
 
 ### 2. 시계열 데이터를 묶는 Dataset 클래스
 ```
 src = 과거 50일
 tgt = 미래 10일
 ```
+<br><br><br>
 
 ### 3. Transformer 모델 구조
 ```py
@@ -93,11 +99,15 @@ self.fc_out = nn.Linear(d_model, input_dim)     # 64 → 5
 ```
 5개의 정보를 64차원으로 바꿔서 계산하고 다시 5개로 되돌려 예측한다.
 
+<br><br><br>
+
 ### 4. 학습 방식 (Teacher Forcing)
 ```py
 teacher_forcing_ratio = 0.2
 ```
 80%는 정답 없이 스스로 예측, 20% 확률로 정답을 힌트로 줘서 예측 훈련
+
+<br><br><br>
 
 ### 5. 예측 결과 보기 
 ```py
@@ -117,6 +127,7 @@ smoothed_predictions = np.convolve(..., mode='valid')
 | Teacher Forcing | 예측할 때 정답을 살짝 알려주는 방식 |
 | Smoothing | 예측 결과를 부드럽게 다듬기 |
 
+<br><br><br>
 
 ---
 
@@ -162,7 +173,9 @@ def load_and_preprocess_data(file_path, features=['종가', '거래량', '시가
   - features: 사용할 주식 지표 (종가, 거래량 등)
 
   - split_ratio: 훈련 데이터와 테스트 데이터로 나눌 비율 (기본값은 80%)
-  
+
+<br><br><br>
+
 ### 2. Dataset 및 DataLoader 구성 (멀티스텝 예측 버전)
 이 클래스는 주식 시계열 데이터를 배치로 나누어 훈련에 사용할 수 있게 만드는 역할을 한다.
 
@@ -233,6 +246,7 @@ shuffle: 데이터를 섞을지 말지를 결정
 
   - `shuffle`: 데이터를 섞을지 여부를 결정한다.
 
+<br><br><br>
 
 ### 3. Transformer 기반 시계열 예측 모델 정의 (멀티스텝 예측 지원)
 ```py
@@ -398,6 +412,7 @@ current_lr: 현재 학습률을 출력한다.
 
 - Teacher Forcing: 모델이 처음엔 정답을 참고해서 연습하는 방법
 
+<br><br><br>
 
 ### 5. 미래 예측 (결과 Smoothing 추가)  
 ```py
@@ -427,6 +442,7 @@ def predict_future(model, test_data, seq_length, pred_length, total_predictions,
     smoothed_predictions = np.convolve(predictions[:, 0], np.ones(smooth_window)/smooth_window, mode='valid')
     return predictions, smoothed_predictions
 ```
+<br><br><br>
 
 ### 6. 시각화 함수 (RMSE 추가)
 ```py
@@ -445,6 +461,8 @@ def plot_predictions(actual, predictions, smoothed_predictions, seq_length):
     plt.legend()
     plt.show()
 ```
+
+<br><br><br>
 
 ### 7. 메인 실행 함수
 ```py
@@ -795,10 +813,15 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+<br><br><br>
+
 # Transformer 개념 정리 및 전체 흐름
 
 ## 1. Transformer란?
 Transformer는 시계열, 자연어 처리(NLP) 등 다양한 분야에서 사용되는 딥러닝 모델로, **순차적인 데이터를 처리**할 수 있는 구조입니다. RNN이나 LSTM과 달리, 순서를 따라가며 계산하지 않고, **병렬로 처리**할 수 있다는 큰 장점이 있습니다.
+
+<br><br><br>
 
 ---
 
@@ -814,14 +837,20 @@ src_emb = self.embedding(src)
 tgt_emb = self.embedding(tgt)
 ```
 
+<br><br>
+
 ### (2) Positional Encoding
 - Transformer는 순서를 모르기 때문에, 각 위치 정보를 따로 더해줌
 - 위치 정보 + 임베딩 = 실제 입력값
+
+<br><br>
 
 ### (3) Multi-head Attention (nhead)
 - 여러 "시점"을 동시에 보면서 관계 파악
 - 예: 주가의 어떤 시점이 미래에 큰 영향을 미칠지 찾는 것
 - nhead=4 → 4개의 독립된 시점 감지기
+
+<br><br>
 
 ### (4) Encoder-Decoder 구조
 #### Encoder:
@@ -836,6 +865,8 @@ tgt_emb = self.embedding(tgt)
 ```py
 output = self.transformer(src_emb, tgt_emb)
 ```
+
+<br><br><br>
 
 ---
 
@@ -857,6 +888,8 @@ output = self.transformer(src_emb, tgt_emb)
 7. 손실(loss) 계산 → 역전파 → 파라미터 업데이트
 ```
 
+<br><br><br>
+
 ---
 
 ## 4. Scheduler
@@ -871,6 +904,8 @@ scheduler = StepLR(optimizer, step_size=20, gamma=0.5)
 - ❌ 학습 횟수를 줄이는 게 아님
 - ✅ 같은 횟수로 학습하되 **변화 폭을 줄이는 것** (속도를 천천히 줄임)
 
+<br><br><br>
+
 ---
 
 ## 5. Decoder 구조란?
@@ -881,6 +916,8 @@ Decoder는 “과거 요약 정보 + 지금까지 예측한 값”을 바탕으�
   - Self-attention (자기 자신 예측값 기반 예측)
   - Cross-attention (인코더의 출력과 연결)
   - Feedforward Network
+
+<br><br><br>
 
 ---
 
@@ -895,6 +932,8 @@ use_teacher_forcing = True if np.random.rand() < teacher_forcing_ratio else Fals
 - 단점: 테스트 때는 정답이 없으므로, 적절히 줄여야 함
 - Transformer만의 특징은 아님. 시퀀스 예측 모델에서 자주 사용됨
 
+<br><br><br>
+
 ---
 
 ## 7. HuberLoss란?
@@ -902,6 +941,8 @@ use_teacher_forcing = True if np.random.rand() < teacher_forcing_ratio else Fals
 - 작은 오차 → MSE처럼 계산
 - 큰 오차 → MAE처럼 선형 계산 (벌점 적음)
 - 결과적으로 **이상치의 영향력 줄이기** 위함
+
+<br><br><br>
 
 ---
 
