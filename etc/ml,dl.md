@@ -1,279 +1,281 @@
-# 시계열 머신러닝·딥러닝 모델링 정리
+## 1. 머신러닝(Machine Learning)과 딥러닝(Deep Learning)의 차이
 
-## 1. 시계열 데이터란?
-
-- 시간 순서대로 정렬된 데이터 (예: 주식 가격, 날씨, 환율 등)
-  
-- 예: 2023-01-01 → 2023-01-02 → 2023-01-03 ...
-  
-- 일반적인 데이터 분석에서는 독립변수(independent variable)를 이용해 종속변수(dependent variable)를 예측하지만
-  
-  시계열 데이터에서는 시간을 독립변수처럼 활용
-
-<br><br><br>
-
-### 시계열 데이터 특징
-- **Abrupt Change** : 갑작스러운 변화가 있는지 확인
-- **Outliers** : 이상치가 존재하는지 확인
-- **Trend** : 데이터가 점점 증가 또는 감소하는 경향이 있는지 확인
-- **Seasonality** : 일정 시간 주기마다 반복되는 패턴이 있는지 확인
-- **Constant Variance** : 분산이 일정한지 확인
-- **Long-run Cycle** : 장기간 주기의 순환이 있는지 확인
+| 구분 | 머신러닝 | 딥러닝 |
+|------|-----------|------------|
+| 정의 | 데이터에서 패턴을 찾아 예측하는 알고리즘 | 신경망 구조를 이용한 머신러닝의 한 분야 |
+| 입력 데이터 | 수작업 특징 추출 필요 | 원시 데이터를 바로 사용 가능 |
+| 모델 복잡도 | 낮음~중간 | 매우 높음 (수많은 파라미터) |
+| 학습 속도 | 빠름 | 느림 (많은 연산량 필요) |
+| 대표 알고리즘 | SVM, KNN, 의사결정나무 등 | CNN, RNN, LSTM, Transformer 등 |
 
 <br><br><br>
 
 ---
 
-## 2. 모델링 기본 흐름
+## 2. 머신러닝 주요 알고리즘 분류
 
-1. 데이터 준비: 시계열 데이터 로드
-2. 정상성 확인: 패턴이 일정한지 확인
-3. 전처리: 로그 변환, 차분 등
-4. 데이터 분할: 훈련/검증/테스트
-5. 모델 학습: ARIMA, MLP, RNN, LSTM 등
-6. 평가: MAE, MSE, RMSE 등
-7. 미래 예측: 향후 데이터 예측
+### 지도학습(Supervised Learning)
+- 레이블(정답)이 있는 데이터를 학습
+- 예시: 분류(Classification), 회귀(Regression)
 
-<br><br><br>
+**주요 알고리즘:**
+- 선형 회귀(Linear Regression)
+- 의사결정나무(Decision Tree)
+- 랜덤 포레스트(Random Forest)
+- SVM(Support Vector Machine)
 
----
+<br><br>
 
-## 3. 기본 개념 정리
+### 비지도학습(Unsupervised Learning)
+- 레이블이 없는 데이터를 군집화 또는 특징 추출
 
-### 정상성 (Stationarity)
-- 평균과 분산이 시간에 따라 일정한 데이터
-- 전통적인 시계열 모델에 꼭 필요함
+**주요 알고리즘:**
+- K-Means
+- PCA (주성분 분석)
+- 계층적 군집(Hierarchical Clustering)
 
-<br><br><br>
+<br><br>
 
-### 정상성 검정 방법
-- **ADF Test (Augmented Dickey-Fuller Test)**
-  - 귀무가설: 비정상 시계열 (Unit root 존재)
-  - p-value < 0.05 → 정상성 있음 (귀무가설 기각)
-```py
-from statsmodels.tsa.stattools import adfuller
-result = adfuller(data)
-print(f'p-value: {result[1]}')
-```
+### 강화학습(Reinforcement Learning)
+- 환경과 상호작용하며 보상을 최대화하도록 학습하는 방식
 
-<br><br><br>
-
-### 로그 수익률 (Log Return)
-- 정의: 로그 수익률은 주가 등의 변화율을 로그로 변환한 것
-- 계산 공식: `log_return = log(today_price / yesterday_price)`
-- 이유: 변동성이 큰 데이터를 안정화시켜 모델 학습에 유리하게 만듦
-
-<br><br><br>
-
-### 차분 (Differencing)
-- 정의: 시간 차이 데이터를 통해 추세 제거 → 정상성 확보
-- 계산 공식: `diff = data[t] - data[t-1]`
+**주요 개념:**
+- Agent (행위자)
+- Environment (환경)
+- Action (행동)
+- Reward (보상)
 
 <br><br><br>
 
 ---
 
-## 4. 주요 모델
-
-| 모델 | 분류 | 특징 |
-|------|------|------|
-| ARIMA | 통계 | 자기회귀(p), 차분(d), 이동평균(q) |
-| SARIMA | 통계 | ARIMA + 계절성 요소 포함 |
-| SVR | 머신러닝 | 과거 데이터를 기반으로 회귀 |
-| Linear Regression | 머신러닝 | 직선 기반 예측 |
-| MLP | 딥러닝 | 기본 신경망 구조 |
-| RNN | 딥러닝 | 시계열 순서 기억 가능 |
-| LSTM | 딥러닝 | 장기 의존성 기억 가능 |
-| GRU | 딥러닝 | LSTM보다 단순하지만 유사한 성능 |
-| Transformer | 딥러닝 | 순서와 상관관계 학습 가능 (attention 메커니즘 기반) |
-
-<br><br><br>
-
----
-
-## 5. 모델 성능 평가 지표
-
-| 지표 | 계산법 | 설명 |
-|------|--------|------|
-| MAE | Mean Absolute Error | 평균 절댓값 오차 |
-| MSE | Mean Squared Error | 평균 제곱 오차 (큰 오차에 민감함) |
-| RMSE | Root Mean Squared Error | 제곱 오차의 루트 (단위 복원) |
-| MAPE | Mean Absolute Percentage Error | 비율 기반 오차, 실제 값이 0에 가까우면 불안정 |
-| R^2 | 결정계수 | 1에 가까울수록 좋은 예측 |
-
-<br><br><br>
-
----
-
-## 6. 자주 쓰는 용어 정리
+## 3. 딥러닝 기본 용어
 
 | 용어 | 설명 |
 |------|------|
-| Batch | 여러 샘플을 한 번에 학습시키는 단위 |
-| Epoch | 전체 데이터를 몇 번 반복해서 학습하는지 횟수 |
-| Loss | 모델의 예측이 얼마나 틀렸는지를 수치로 표현한 것 |
-| Optimizer | 모델을 더 잘 예측하도록 가중치를 조정하는 함수 (예: Adam, SGD) |
-| fit_transform | 데이터를 전처리하고 학습(피팅)까지 한 번에 수행하는 메서드 |
-| val_loss | 검증용 데이터(validation set)에서의 손실값. 과적합 여부 판단에 사용 |
-| Overfitting | 훈련 데이터에만 지나치게 잘 맞추고 일반화가 안 되는 현상 |
-| Underfitting | 훈련 데이터조차 잘 예측하지 못하는 상태 |
+| Epoch | 전체 학습 데이터를 몇 번 반복 학습할 것인지 |
+| Batch Size | 한 번에 학습하는 데이터 샘플 수 |
+| Iteration | 한 Epoch 동안 반복 횟수 (데이터 수 / 배치 크기) |
+| Loss | 예측값과 실제값의 차이 (오차) |
+| Optimizer | 모델 파라미터를 갱신해 손실을 최소화하는 도구 (Adam, SGD 등) |
+| Learning Rate | 가중치를 얼마나 크게 조정할지 결정하는 값 |
+| Overfitting | 학습 데이터에 과도하게 적합되어 일반화되지 않는 문제 |
+| Underfitting | 학습 데이터조차 잘 예측하지 못하는 상태 |
 
 <br><br><br>
 
 ---
 
-## 7. ACF / PACF 개념
+## 4. 손실 함수(Loss Function)
 
-| 지표 | 설명 | 의미 |
-|------|------|------|
-| ACF | Autocorrelation Function | 전체 시점 간 자기 상관 관계 |
-| PACF | Partial ACF | 직접적인 상관관계만 고려함 |
-
-<br><br><br>
-
-### ACF / PACF 패턴 해석
-
-| ACF 패턴 | PACF 패턴 | 추천 모델 |
-|-----------|-------------|-------------|
-| 천천히 감소 | 뚝 끊김 | AR 모델 |
-| 뚝 끊김 | 천천히 감소 | MA 모델 |
-| 둘 다 천천히 감소 | - | 비정상 데이터 가능성 |
+| 종류 | 설명 |
+|------|------|
+| MSE (Mean Squared Error) | 평균 제곱 오차, 회귀에서 주로 사용 |
+| MAE (Mean Absolute Error) | 평균 절대 오차, 이상치에 덜 민감 |
+| Cross Entropy | 분류 문제에서 많이 사용되는 손실 함수 |
 
 <br><br><br>
 
 ---
 
-## 8. 예측 결과 복원 예시 (로그 수익률 기반)
+## 5. 활성화 함수(Activation Function)
 
-> 로그 수익률로 예측된 값을 원래의 가격 단위로 복원할 때 사용함
-
-```py
-predicted_price = [start_price]  # 시작 가격 (예: 마지막 실제 종가)
-for log_return in predicted_log_returns:
-    next_price = predicted_price[-1] * np.exp(log_return)
-    predicted_price.append(next_price)
-```
-
-- `np.exp(log_return)`은 로그 수익률을 다시 가격 변화율로 바꾸는 함수임
-- 누적해서 다음 가격을 계산함
+| 함수 | 설명 |
+|------|------|
+| ReLU | 0보다 작으면 0, 크면 그대로 출력 (가장 많이 사용됨) |
+| Sigmoid | 출력이 0~1 사이 (이진 분류에 사용) |
+| Tanh | 출력이 -1~1 사이 |
+| Softmax | 출력값을 확률로 변환 (다중 클래스 분류) |
 
 <br><br><br>
 
 ---
 
-## 9. PyTorch란?
+## 6. 신경망 기본 구조
 
-- **PyTorch**는 Python 기반의 딥러닝 프레임워크로, Facebook에서 개발함
-- 텐서 연산, 자동 미분, GPU 연산을 지원하며 딥러닝 모델 구현에 많이 사용됨
+### 1) 퍼셉트론(Perceptron)
+- 인공 뉴런 한 개를 모델링한 것
+- 입력 * 가중치 → 총합 → 활성화 함수 → 출력
 
-<br><br><br>
+<br><br>
 
----
-
-## 10. PyTorch 모델 구조 예시
-
-### MLP (다층 퍼셉트론)
+### 2) MLP (다층 퍼셉트론)
 ```py
 self.model = nn.Sequential(
-    nn.Linear(input_size, hidden_size),  # 입력층 → 은닉층
-    nn.ReLU(),                           # 활성화 함수
-    nn.Linear(hidden_size, output_size)  # 은닉층 → 출력층
+    nn.Linear(input_size, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, output_size)
 )
 ```
-- 여러 개의 fully connected layer로 구성된 기본 신경망 구조
-
-<br><br><br>
-
-### RNN (순환 신경망)
-```py
-self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
-self.fc = nn.Linear(hidden_size, output_size)
-```
-- 이전 시점의 출력(hidden state)을 현재 시점 입력과 함께 사용
-
-<br><br><br>
-
-### LSTM (장기기억 순환 신경망)
-```py
-self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
-self.fc = nn.Linear(hidden_size, output_size)
-```
-- RNN 구조를 개선하여 장기 의존성(long-term dependency)을 잘 처리함
-- cell state와 gate 구조가 핵심
 
 <br><br><br>
 
 ---
 
-## 11. 학습 코드 예시
-
-> 모델 학습 과정을 반복(epoch)하며 데이터셋을 이용해 손실을 줄이는 구조
-
+## 7. 모델 훈련 기본 코드 흐름
 ```py
-for epoch in range(epochs):                          # epoch 수 만큼 반복
-    model.train()                                    # 모델을 학습 모드로 전환
-    for X_batch, y_batch in train_loader:            # 배치 단위로 데이터 불러오기
-        output = model(X_batch)                      # 예측 수행
-        loss = criterion(output, y_batch)            # 손실 계산
-        loss.backward()                              # 역전파로 gradient 계산
-        optimizer.step()                             # optimizer로 가중치 갱신
-        optimizer.zero_grad()                        # gradient 초기화
+for epoch in range(epochs):
+    model.train()
+    for X_batch, y_batch in train_loader:
+        output = model(X_batch)
+        loss = criterion(output, y_batch)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
 ```
 
 <br><br><br>
 
 ---
 
-## 12. 추천 학습 순서
+## 8. 자주 등장하는 용어 정리
 
-1. 시계열 기본 개념 이해 (정상성, 로그 수익률, 차분)
-2. 통계 기반 모델 실습 (ARIMA, ADF 테스트)
-3. 머신러닝 회귀 모델 실습 (SVR, 선형 회귀 등)
-4. 딥러닝 모델 순차 학습 (MLP → RNN → LSTM → Transformer)
-5. PyTorch 기초 학습 (Tensor, 모델 정의, 학습 코드)
-6. 입력 구조와 출력 복원 방법 숙지
-7. 모델 성능 비교 및 시각화 연습
+| 용어 | 설명 |
+|------|------|
+| Feature | 입력 변수 (설명 변수) |
+| Label | 출력 변수 (목표 값) |
+| Weight | 각 입력에 곱해지는 가중치 |
+| Bias | 출력에 더해지는 값 (편향) |
+| Backpropagation | 오차를 기준으로 가중치를 조정하는 방법 |
+| Gradient Descent | 손실 최소화를 위한 최적화 알고리즘 |
+
+<br><br><br>
 
 ---
 
-## 13. etc
-- 과적합 : 학습 데이터에 과도하게 적합화하여 평가 데이터의 샘플에서 오답이 많이 발생하는 문제 
+## 9. 데이터 전처리 필수 개념
 
-- 손실 : 학습 데이터 또는 평가 데이터를 학습 모델에 통과시켰을 때 정답과의 괴리 정도를 손실이라고 한다. 
+| 개념 | 설명 |
+|------|------|
+| 정규화(Normalization) | 데이터의 범위를 [0,1]로 조정 |
+| 표준화(Standardization) | 평균 0, 표준편차 1로 조정 |
+| One-hot encoding | 범주형 데이터를 이진 벡터로 변환 |
+| 결측값 처리 | 평균/중앙값 대체, 제거, 예측 등 |
 
-  학습을 진행함에 따라 손실이 줄어들면서 데이터에 적합화된다. 비용과 오차도 같은 의미로 쓰인다.
+<br><br><br>
 
-- 지도학습 : 레이블이 있는 데이터를 학습하는 방법(레이블이 있다는 것은 정답이 있다는 의미)
+---
 
-  주료 분류와 회귀문제를 다룬다.
+## 10. 추천 학습 순서
 
-- 비지도학습 : 레이블이 없는 데이터를 학습하는 방법 주로 데이터를 그룹화하거나 데이터의 특징을 분석하기 위해서 사용
+1. 머신러닝의 개념과 지도/비지도 학습 이해
+2. 대표적인 모델(SVM, KNN, Decision Tree) 실습
+3. 오차와 평가 지표 이해 (MSE, MAE, Accuracy 등)
+4. 딥러닝 구조 (Perceptron → MLP → CNN → RNN) 익히기
+5. PyTorch 또는 TensorFlow 기본 문법 연습
+6. 학습 흐름, 손실 함수, 옵티마이저 역할 파악
+7. 데이터 전처리 및 모델 성능 비교 실습
 
-  비지도학습은 정답이 없는 데이터를 분석하는 것이므로 데이터에 레이블을 부여할 필요가 없다(데이터를 준비하기 위한 비용이 적다)
+<br><br><br>
 
--  강화학습 : 에이전트가 어떠한 환경에서 행동을 수행했을 때 보상을 함으로써
+---
 
-   에이전트는 그 보상을 최대로 하는 행동을 수행하도록 학습하게 하는 방법
+## 11. 데이터 분할 전략 및 예제 코드
 
-- 인공신경망-활성화 함수 중 렐루 함수는 가중치 곱의 합이 0보다 크면 그 값을 그대로 반환하고
+### 11.1 `train_test_split()` 사용
+```py
+from sklearn.model_selection import train_test_split
 
-    0보다 작으면 0을 반환하는 활성화 함수다. 인공신경망의 은닉층에서 많이 쓰이는 활성화 함수
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+```
+20%를 테스트 데이터셋으로 사용
 
-- 인공신경망-활성화 함수 중 시그모이드 함수는 가중치 곱의 합을 0과 1 사이의 값으로 조정하여 반환하는 활성화 함수.
+<br><br>
 
-    시그모이드 함수는 로지스틱 함수라고도 부른다.
+### 11.2 Numpy로 직접 나누기 (학습/검증/테스트)
+```py
+import numpy as np
 
-- 정규화 : 손실함수에 람다상수와 가중치 제곱의 합을 곱하여 더하는 방법.
+# 데이터 섞기
+indices = np.arange(len(X))
+np.random.seed(42)
+np.random.shuffle(indices)
 
-  손실값을 줄이는 방향으로 학습이 진행됨과 동시에 가중치의 값도 줄여 나가는 것
+# 비율 설정 (60% 학습, 20% 검증, 20% 테스트)
+train_end = int(0.6 * len(X))
+val_end = int(0.8 * len(X))
 
-- train_test_split() : 데이터를 학습용 데이터와 테스트용 데이터로 나누는 함수
+X_train, y_train = X[indices[:train_end]], y[indices[:train_end]]
+X_val, y_val = X[indices[train_end:val_end]], y[indices[train_end:val_end]]
+X_test, y_test = X[indices[val_end:]], y[indices[val_end:]]
+```
 
-    - X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) # 20%를 테스트 데이터셋으로 사용
- 
-- MNIST Dataset 구성
+<br><br>
 
+### 11.3 `StratifiedKFold` (계층적 분할)
+```py
+from sklearn.model_selection import StratifiedKFold
+
+skf = StratifiedKFold(n_splits=5)
+for train_index, test_index in skf.split(X, y):
+    X_train, X_test = X[train_index], X[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+```
+
+<br><br>
+
+### 11.4 `GroupKFold` (그룹 기반 분할)
+```py
+from sklearn.model_selection import GroupKFold
+
+groups = ...  # 예: 사용자 ID 등
+
+gkf = GroupKFold(n_splits=5)
+for train_idx, test_idx in gkf.split(X, y, groups):
+    X_train, X_test = X[train_idx], X[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
+```
+
+<br><br><br>
+
+---
+
+## 12. 대표적인 이미지 데이터셋
+
+### 12.1 MNIST (숫자 손글씨)
 ```py
 from keras.datasets import mnist
-(x_train, y_train), (x_test, y_test) = mnist.load_data() # MNIST 데이터셋은 60000개의 훈련 데이터와 10000개의 테스트 데이터로 고정되어 제공 
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
 ```
+`mnist.load_data()` : MNIST 데이터셋은 60000개의 훈련 데이터와 10000개의 테스트 데이터로 고정되어 제공
+
+<br><br>
+
+### 12.2 Fashion-MNIST (의류 이미지)
+```py
+from keras.datasets import fashion_mnist
+(x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+```
+
+<br><br>
+
+### 12.3 CIFAR-10 (컬러 이미지)
+```py
+from keras.datasets import cifar10
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+```
+
+<br><br>
+
+### 12.4 PyTorch용 TensorDataset & DataLoader 예시
+```py
+from torch.utils.data import TensorDataset, DataLoader
+
+dataset = TensorDataset(torch.tensor(X), torch.tensor(y))
+data_loader = DataLoader(dataset, batch_size=64, shuffle=True)
+```
+
+<br><br><br>
+
+---
+
+## 기타 정리
+
+- **과적합(Overfitting)** : 모델이 학습 데이터에만 너무 잘 맞추고 새로운 데이터에는 성능이 낮은 상태
+- **손실(Loss)** : 정답과 예측값 간의 거리 또는 차이를 수치로 표현한 값 (낮을수록 좋음)
+- **지도학습** : 정답이 있는 데이터를 이용해 학습하는 방법. 분류/회귀 문제에서 사용
+- **비지도학습** : 정답 없이 데이터의 구조나 패턴을 학습 (군집화, 차원 축소 등)
+- **강화학습** : 보상을 기반으로 최적의 행동을 학습하는 방법. 게임, 로봇 등에 많이 사용
+
