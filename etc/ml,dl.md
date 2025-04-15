@@ -267,3 +267,13 @@ for epoch in range(epochs):                          # epoch 수 만큼 반복
 
   손실값을 줄이는 방향으로 학습이 진행됨과 동시에 가중치의 값도 줄여 나가는 것
 
+- train_test_split() : 데이터를 학습용 데이터와 테스트용 데이터로 나누는 함수
+
+    - X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) # 20%를 테스트 데이터셋으로 사용
+ 
+- MNIST Dataset 구성
+
+```py
+from keras.datasets import mnist
+(x_train, y_train), (x_test, y_test) = mnist.load_data() # MNIST 데이터셋은 60000개의 훈련 데이터와 10000개의 테스트 데이터로 고정되어 제공 
+```
