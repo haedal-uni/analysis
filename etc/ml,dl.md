@@ -17,7 +17,9 @@
 ### 지도학습(Supervised Learning)
 - 레이블(정답)이 있는 데이터를 학습
 - 예시: 분류(Classification), 회귀(Regression)
+  - 스팸 이메일 분류, 집값 예측
 
+  
 **주요 알고리즘:**
 - 선형 회귀(Linear Regression)
 - 의사결정나무(Decision Tree)
@@ -27,7 +29,8 @@
 <br><br>
 
 ### 비지도학습(Unsupervised Learning)
-- 레이블이 없는 데이터를 군집화 또는 특징 추출
+- 레이블이 없는 데이터를 군집화 또는 특징 추출(정답이 없는 데이터에서 패턴을 찾기)   
+- ex.고객 군집화, 데이터 차원 축소
 
 **주요 알고리즘:**
 - K-Means
@@ -38,6 +41,7 @@
 
 ### 강화학습(Reinforcement Learning)
 - 환경과 상호작용하며 보상을 최대화하도록 학습하는 방식
+- **특징**: 행동 → 보상 → 정책 학습 방식
 
 **주요 개념:**
 - Agent (행위자)
@@ -86,6 +90,22 @@
 | Sigmoid | 출력이 0~1 사이 (이진 분류에 사용) |
 | Tanh | 출력이 -1~1 사이 |
 | Softmax | 출력값을 확률로 변환 (다중 클래스 분류) |
+
+```py
+model = Sequential([
+    # 1차원 feature map 생성
+    Conv1D(filters=32, kernel_size=5,
+           padding="causal",
+           activation="relu",
+           input_shape=[WINDOW_SIZE, 1]),
+    # LSTM
+    LSTM(16, activation='tanh'),
+    Dense(16, activation="relu"),
+    Dense(1),
+])
+```
+
+[참고 코드](https://github.com/haedal-uni/analysis/blob/main/work/2025-04/250408_LSTM%EC%9D%84_%ED%99%9C%EC%9A%A9%ED%95%9C_%EC%A3%BC%EA%B0%80_%EC%98%88%EC%B8%A1_%EB%AA%A8%EB%8D%B8.ipynb)
 
 <br><br><br>
 
@@ -143,7 +163,7 @@ for epoch in range(epochs):
 
 ---
 
-## 9. 데이터 전처리 필수 개념
+## 9. 데이터 전처리 
 
 | 개념 | 설명 |
 |------|------|
@@ -180,7 +200,9 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 ```
-20%를 테스트 데이터셋으로 사용
+*20%를 테스트 데이터셋으로 사용
+
+또는 Numpy로 직접 분할하거나 StratifiedKFold/GroupKFold 사용 가능
 
 <br><br>
 
@@ -268,6 +290,140 @@ data_loader = DataLoader(dataset, batch_size=64, shuffle=True)
 ```
 
 <br><br><br>
+
+---
+
+
+## 13. 하이퍼파라미터 튜닝 (Hyperparameter Tuning)
+
+**하이퍼파라미터란?**
+- 학습 전에 사용자가 지정하는 값 (예: learning rate, batch size, epoch 수)
+
+**튜닝 방법:**
+- **Grid Search**: 미리 정의한 값들을 조합으로 탐색
+- **Random Search**: 무작위 조합으로 탐색
+- **Optuna / Hyperopt**: 베이지안 최적화 기반 자동화 도구
+
+```py
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+
+params = {'n_estimators': [100, 200], 'max_depth': [5, 10]}
+grid = GridSearchCV(RandomForestClassifier(), param_grid=params, cv=3)
+grid.fit(X_train, y_train)
+print(grid.best_params_)
+```
+
+---
+
+## 14. 파인 튜닝 (Fine-Tuning)
+
+**정의:**
+- 이미 학습된 모델(pretrained model)의 일부 또는 전체를 미세 조정하여 새로운 데이터셋에 맞추는 방법
+
+**예시:**
+- ImageNet으로 학습된 VGG16 모델의 가중치를 가져와, 마지막 layer만 교체해 재학습
+
+```py
+from tensorflow.keras.applications import VGG16
+
+base_model = VGG16(weights='imagenet', include_top=False)
+for layer in base_model.layers:
+    layer.trainable = False  # 기존 가중치 고정
+
+# 새롭게 분류 레이어 추가
+model = Sequential([
+    base_model,
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dense(10, activation='softmax')
+])
+```
+
+---
+
+## 15. 윈도우 슬라이싱 (Windowing)과 롤링 (Rolling)
+
+### 15.1 윈도우(Windowing)
+- 시계열 데이터를 일정한 크기의 구간(window)으로 잘라 입력으로 사용
+- 예: 과거 7일 데이터를 이용해 오늘 값을 예측
+
+```py
+WINDOW_SIZE = 7
+X, y = [], []
+for i in range(len(data) - WINDOW_SIZE):
+    X.append(data[i:i+WINDOW_SIZE])
+    y.append(data[i+WINDOW_SIZE])
+```
+
+### 15.2 롤링(Rolling)
+- 시간축을 따라 이동하며 통계값(평균, 표준편차 등) 계산
+
+```py
+import pandas as pd
+
+df['rolling_mean'] = df['price'].rolling(window=7).mean()
+df['rolling_std'] = df['price'].rolling(window=7).std()
+```
+
+---
+
+## 16. 딥러닝 모델 예제 (Conv1D + LSTM)
+
+```py
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv1D, LSTM, Dense
+
+model = Sequential([
+    Conv1D(filters=32, kernel_size=5, padding="causal", activation="relu", input_shape=[WINDOW_SIZE, 1]),
+    LSTM(16, activation='tanh'),
+    Dense(16, activation="relu"),
+    Dense(1),
+])
+```
+
+### 코드 해석:
+- **Conv1D**: 시계열의 로컬 패턴(변화량)을 먼저 추출
+- **LSTM**: 시간의 흐름을 반영해 기억하고 예측
+- **Dense**: 최종 출력값 계산 (회귀 문제에서 사용)
+
+---
+
+## 17. PyTorch MLP 코드
+
+```py
+import torch.nn as nn
+
+self.model = nn.Sequential(
+    nn.Linear(input_size, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, output_size)
+)
+```
+
+- **input_size**: 입력 벡터 크기
+- **hidden_size**: 은닉층 노드 수
+- **output_size**: 예측값 크기 (1이면 회귀)
+
+---
+
+## 18. 모델 학습 루프
+
+```py
+for epoch in range(epochs):
+    model.train()
+    for X_batch, y_batch in train_loader:
+        output = model(X_batch)
+        loss = criterion(output, y_batch)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+```
+
+- **loss.backward()**: 오차를 기준으로 기울기 계산
+- **optimizer.step()**: 파라미터 업데이트
+- **optimizer.zero_grad()**: 이전 기울기 초기화
+
 
 ---
 
