@@ -435,3 +435,190 @@ for epoch in range(epochs):
 - **비지도학습** : 정답 없이 데이터의 구조나 패턴을 학습 (군집화, 차원 축소 등)
 - **강화학습** : 보상을 기반으로 최적의 행동을 학습하는 방법. 게임, 로봇 등에 많이 사용
 
+
+---
+
+## 13. 하이퍼파라미터 튜닝 (Hyperparameter Tuning)
+
+**하이퍼파라미터란?**
+
+모델이 학습되기 전에 사람이 직접 설정해주는 값입니다.
+
+예: 학습률(Learning Rate), 배치 크기(Batch Size), 은닉층 크기, 에포크 수 등
+
+| 하이퍼파라미터 | 설명 |
+| --- | --- |
+| Learning Rate | 가중치를 얼마나 크게 업데이트할지 결정 |
+| Epochs | 전체 데이터를 몇 번 반복할 것인지 |
+| Batch Size | 한 번에 학습할 데이터 샘플 수 |
+| Hidden Units | 은닉층 뉴런 수 (모델의 복잡도 결정) |
+| Dropout Rate | 과적합 방지를 위한 무작위 노드 비활성화 비율 |
+
+### 13.1 그리드 서치 (GridSearchCV)
+```python
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [None, 10, 20]
+}
+
+grid_search = GridSearchCV(RandomForestClassifier(), param_grid, cv=3)
+grid_search.fit(X_train, y_train)
+
+print("최적 파라미터:", grid_search.best_params_)
+
+```
+
+- 여러 하이퍼파라미터 조합을 시도해보고 가장 좋은 성능을 찾음
+
+<br>
+
+### 13.2 랜덤 서치 (RandomizedSearchCV)
+
+```python
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import randint
+
+param_dist = {
+    'n_estimators': randint(50, 200),
+    'max_depth': [None, 10, 20, 30]
+}
+
+random_search = RandomizedSearchCV(RandomForestClassifier(), param_distributions=param_dist, n_iter=10, cv=3)
+random_search.fit(X_train, y_train)
+
+print("최적 파라미터:", random_search.best_params_)
+```
+
+- GridSearch보다 빠르게 튜닝 가능 (일부 조합만 시도)
+
+<br><br><br>
+
+## 14. 모델 평가 지표
+
+| 평가 지표 | 설명 | 사용 예시 |
+| --- | --- | --- |
+| Accuracy | 전체 예측 중 맞춘 비율 | 분류(Classification) |
+| Precision | 예측 중 진짜 정답인 비율 | 스팸 필터에서 중요 |
+| Recall | 실제 정답 중 얼마나 맞췄는지 | 암 진단 등 민감한 경우 |
+| F1 Score | 정밀도와 재현율의 조화 평균 | 불균형 데이터 |
+| MSE | 예측값과 실제값의 제곱 평균 | 회귀(Regression) |
+| MAE | 절대 오차 평균 | 회귀, 이상치에 덜 민감 |
+
+```python
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+
+print(f"정확도: {accuracy}, 정밀도: {precision}, 재현율: {recall}, F1: {f1}")
+
+```
+
+<br><br><br>
+
+## 15. PyTorch 기본 학습 코드 템플릿
+
+### 15.1 모델 정의
+
+```python
+import torch
+import torch.nn as nn
+
+# 다층 퍼셉트론 (MLP)
+class MLPModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(MLPModel, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
+        )
+
+    def forward(self, x):
+        return self.model(x)
+
+```
+
+### 15.2 학습/검증 코드 흐름
+
+```python
+model = MLPModel(input_dim=10, hidden_dim=32, output_dim=1)
+criterion = nn.MSELoss()  # 손실 함수
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+for epoch in range(50):  # 총 50번 반복
+    model.train()  # 학습 모드 설정
+    for X_batch, y_batch in train_loader:
+        y_pred = model(X_batch)  # 예측
+        loss = criterion(y_pred, y_batch)  # 손실 계산
+        optimizer.zero_grad()  # 기존 기울기 초기화
+        loss.backward()  # 역전파
+        optimizer.step()  # 파라미터 업데이트
+
+    print(f"Epoch {epoch+1} - Loss: {loss.item():.4f}")
+
+```
+
+> 💡 train_loader는 학습 데이터를 배치 단위로 묶어주는 역할
+
+<br><br><br>
+
+---
+
+## 16. 딥러닝 주요 구조 요약
+
+| 구조 | 설명 | 사용 예시 |
+| --- | --- | --- |
+| MLP | 입력 → 은닉층 → 출력층 | 기초 회귀, 분류 문제 |
+| CNN | 이미지 처리, 필터 활용 | 이미지 분류 (MNIST 등) |
+| RNN | 시계열 데이터 순서 유지 | 주가 예측, 자연어 처리 |
+| LSTM | 장기 기억 유지가 가능한 RNN | 뉴스 감성 분석 |
+| GRU | LSTM보다 구조 단순한 RNN | 시계열 예측 |
+| Transformer | 병렬처리 강점, 어텐션 기반 | 번역, 챗봇, BERT |
+
+<br><br><br>
+
+---
+
+## 17. 시계열 예측 딥러닝 모델 예시 (LSTM)
+
+```python
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
+# 시계열 예측을 위한 LSTM 모델 구성
+model = Sequential([
+    LSTM(50, activation='tanh', input_shape=(10, 1)),  # 10일치 데이터를 입력
+    Dense(1)  # 다음 날 값을 예측
+])
+
+model.compile(loss='mse', optimizer='adam')
+model.summary()
+```
+
+`input_shape=(10, 1)`은 10일치 데이터를 시계열 순서대로 1차원으로 입력한다는 뜻입니다.
+
+## 18. 용어 시각 예시 (한눈에 이해)
+
+```
+[Feature]   [Weight]    [Sum]   [Activation]   [Output]
+   x1     →    w1     →    +     →   ReLU     →    y1
+   x2     →    w2     →    +     →   ReLU     →    y2
+```
+
+- 각 입력 x에 가중치 w를 곱하고, 합을 구해 활성화 함수로 전달 → 출력 생성
+
+## 19. 마무리 요약
+
+- **머신러닝**은 규칙을 스스로 학습하는 알고리즘, **딥러닝**은 신경망 기반의 복잡한 모델
+- 지도/비지도/강화학습으로 구분
+- 모델 구조, 손실 함수, 옵티마이저, 평가 지표 등은 실무의 핵심
+- PyTorch와 TensorFlow는 딥러닝을 구현할 수 있는 대표 프레임워크
+- 하이퍼파라미터 튜닝을 통해 성능 개선 가능
+- 전처리 → 학습 → 평가 → 튜닝 → 배포 순으로 모델링 진행
