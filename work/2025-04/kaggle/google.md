@@ -240,6 +240,83 @@ MSE: 70.77429343216302
 
 - MAPE(평균 절대 비율 오차) : MAE를 퍼센트로 표현
 
+<br><br><br>
+
+### 추가 분석
+```py
+#### test.csv를 활용
+# train.csv와 test.csv 불러오기
+train_df = pd.read_csv("Google_Stock_Price_Train.csv")
+test_df = pd.read_csv("Google_Stock_Price_Test.csv")
+
+test_df.info()
+```
+
+```py
+
+
+# train 시가 데이터
+train_data = train_df[["Open"]].values
+
+# test 시가 데이터
+test_data = test_df[["Open"]].values
+
+# 정규화 기준은 train 데이터로만 fit
+scaler = MinMaxScaler()
+train_scaled = scaler.fit_transform(train_data)
+test_scaled = scaler.transform(test_data)
+
+# 예측용 시계열 데이터 구성 (예: 마지막 50일 기준으로 예측)
+X_test = []
+ts = 10
+for i in range(ts, len(test_scaled)):
+    X_test.append(test_scaled[i-ts:i, 0])
+X_test = np.array(X_test).reshape(-1, ts, 1)
+
+# 학습은 train_scaled 기준으로
+X_train, y_train, _ = create_timesteps(ts=50)
+
+modelRNN.fit(X_train, y_train, epochs=100)
+
+# 예측은 test 데이터로
+pred_scaled = modelRNN.predict(X_test)
+pred_original = scaler.inverse_transform(pred_scaled)
+
+# 실제 test 정답값과 비교하려면
+y_test = test_scaled[ts:, 0].reshape(-1, 1)
+y_test_original = scaler.inverse_transform(y_test)
+
+# 평가
+mae = mean_absolute_error(y_test_original, pred_original)
+mse = mean_squared_error(y_test_original, pred_original)
+```
+
+
+```py
+#### 평가 지표
+mae = mean_absolute_error(y_test_original, pred_original)
+mse = mean_squared_error(y_test_original, pred_original)
+print(mae, mse)
+```
+```
+14.302562499999988 259.82190703367775
+```
+
+```py
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(12,6))
+plt.plot(y_test_original, label="실제 시가", marker='o')
+plt.plot(pred_original, label="예측 시가", marker='x')
+plt.title("Test 데이터: 실제 시가 vs 예측 시가")
+plt.xlabel("시간")
+plt.ylabel("시가")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+```
+
 
 <br><br><br><br>
 
