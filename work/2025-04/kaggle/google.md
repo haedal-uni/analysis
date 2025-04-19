@@ -1,12 +1,76 @@
+## Google 주가 예측
+- RNN, GRU, LSTM
+
+- Date, Open, High, Low, Close, Volume
+
+```py
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+df=pd.read_csv("Google_Stock_Price_Train.csv")
+df.head()
+```
+| **Date** | **Open** | **High** | **Low** | **Close** | **Volume** |
+| --- | --- | --- | --- | --- | --- |
+| **0** | 1/3/2012 | 325.25 | 332.83 | 324.97 | 663.59 |
+| **1** | 1/4/2012 | 331.27 | 333.87 | 329.08 | 666.45 |
+| **2** | 1/5/2012 | 329.83 | 330.75 | 326.89 | 657.21 |
+| **3** | 1/6/2012 | 328.34 | 328.77 | 323.68 | 648.24 |
+| **4** | 1/9/2012 | 322.04 | 322.29 | 309.46 | 620.76 |
+
+<br><br><br>
+
+```
+df.shape
+df.info()
+```
+```
+(1258, 6)
+
+ #   Column  Non-Null Count  Dtype  
+---  ------  --------------  -----  
+ 0   Date    1258 non-null   object 
+ 1   Open    1258 non-null   float64
+ 2   High    1258 non-null   float64
+ 3   Low     1258 non-null   float64
+ 4   Close   1258 non-null   object 
+ 5   Volume  1258 non-null   object 
+dtypes: float64(3), object(3)
+```
+null 값이 없는 것을 확인한다.
+
+<br><br><br>
+
+
 ```py
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, LSTM, GRU
 from sklearn.preprocessing import MinMaxScaler
 
 train = df.loc[:, ["Open"]].values  # 종가 대신 시가(Open)만 뽑아서 numpy 배열로 변환
-scaler = MinMaxScaler(feature_range=(0, 1))  # 정규화(데이터를 0~1 범위로 바꾸기 위해 MinMaxScaler를 설정)
-train_scaled = scaler.fit_transform(train)  # 0~1로 스케일링(데이터를 학습시킬 수 있도록 정규화(스케일링))
+scaler = MinMaxScaler(feature_range=(0, 1))  # 정규화(데이터를 0 ~ 1 범위로 바꾸기 위해 MinMaxScaler를 설정)
+train_scaled = scaler.fit_transform(train)  # 0 ~ 1로 스케일링(데이터를 학습시킬 수 있도록 정규화(스케일링))
 ```
+```
+array([[325.25],
+       [331.27],
+       [329.83],
+       ...,
+       [793.7 ],
+       [783.33],
+       [782.75]])
+
+array([[0.08581368],
+       [0.09701243],
+       [0.09433366],
+       ...,
+       [0.95725128],
+       [0.93796041],
+       [0.93688146]])
+```
+
+<br><br><br>
 
 ```py
 # 타임스텝 데이터셋 생성 함수
@@ -25,18 +89,20 @@ def create_timesteps(ts=50): # ts: 타임스텝 → 과거 50일 사용
 
 - 이런 방식으로 과거 데이터를 입력으로 다음 날 데이터를 출력으로 만들어 학습용 데이터셋을 구성한다.
 
-reshape(-1, ts, 1) 설명
-reshape은 데이터의 모양을 바꾸는 것입니다.
+- reshape(-1, ts, 1):
 
--1: 샘플 수 (자동으로 계산됨. 예: 몇 개 만들지 몰라도 자동 계산)
+  - reshape은 데이터의 모양을 바꾸는 것.
 
-ts: 한 샘플당 몇 개의 시간 데이터를 가지고 있는지 (예: 과거 50일)
+  - -1: 샘플 수 (자동으로 계산됨. 예: 몇 개 만들지 몰라도 자동 계산)
 
-1: 특성 수 (여기서는 시가 하나만 쓰니까 1개)
+  - ts: 한 샘플당 몇 개의 시간 데이터를 가지고 있는지 (예: 과거 50일)
 
-즉, 모양은 (샘플 수, 50, 1)이 된다. 
+  - 1: 특성 수 (여기서는 시가 하나만 쓰니까 1개)
 
-<br>
+  - 즉, 모양은 (샘플 수, 50, 1)이 된다.  
+
+<br><br><br>
+
 
 ### 1) RNN 모델
 ```py
@@ -48,6 +114,7 @@ modelRNN.add(Dense(1))  # 다음 시점의 가격 1개 예측
 modelRNN.compile(optimizer="ADAM", loss="mse")
 modelRNN.fit(X_train, y_train, epochs=100)
 ```
+loss: 2.8382e-04
 
 - 입력: 과거 50일간의 시가
 
@@ -56,6 +123,8 @@ modelRNN.fit(X_train, y_train, epochs=100)
 - 모델: SimpleRNN → Dense
 
 - 용도: 단기 시계열 예측
+
+<br><br><br>
 
 ### 2) LSTM 모델
 ```py
@@ -68,11 +137,15 @@ model.compile(loss='mean_squared_error', optimizer='adam')
 model.fit(X_train, y_train, epochs=50)
 ```
 
+loss: 8.4960e-04
+
 - 입력: 과거 10일 시가
 
 - 출력: 다음 날 시가
 
 - 모델: LSTM → Dense
+
+<br><br><br>
 
 ### 3) GRU 모델
 ```py
@@ -85,12 +158,14 @@ model_gru_ts.add(Dense(1))
 model_gru_ts.compile(optimizer="ADAM", loss="mse")
 model_gru_ts.fit(X_train, y_train, epochs=100)
 ```
+
+3.8390e-04
+
 - 입력: 과거 50일 시가
 
 - 모델: GRU 2층 + Dense
 
 - 특징: return_sequences=True로 중간층 출력 유지 → 시계열 길이 유지
-
 
 <br><br>
 
@@ -117,6 +192,9 @@ predicted_price = scaler.inverse_transform(pred_scaled)
 print("예측한 다음 날 시가:", predicted_price[0][0])
 ```
 
+<br><br><br>
+
+
 ```py
 # 학습 데이터 전체에 대해 예측
 train_predict = modelRNN.predict(X_train)
@@ -135,6 +213,9 @@ plt.xlabel("시간")
 plt.ylabel("시가")
 plt.show()
 ```
+![image](https://github.com/user-attachments/assets/ae3ef32d-67ee-4d70-b320-843d83bb2168)
+
+<br><br><br>
 
 ```py
 from sklearn.metrics import mean_absolute_error, mean_squared_error
@@ -145,6 +226,23 @@ mse = mean_squared_error(y_train_original, train_predict_original)
 print("MAE:", mae)
 print("MSE:", mse)
 ```
+```
+MAE: 5.447966969521508 
+MSE: 70.77429343216302
+```
+
+#### 모델 성능 평가 지표(값이 낮을수록 좋다.)
+- MAE (평균 절대 오차) : 실제 정답 값과 예측 값의 차이를 절댓값으로 변환한 뒤 합산하여 평균을 구한다.
+
+- MSE (평균 제곱 오차) : 실제 정답 값과 예측 값의 차이를 제곱한 뒤 평균을 구한다.
+
+- RMSE(평균 제곱근 오차) : MSE에 루트를 씌운 값
+
+- MAPE(평균 절대 비율 오차) : MAE를 퍼센트로 표현
+
+
+<br><br><br><br>
+
 
 ---
 
@@ -182,6 +280,7 @@ X_train = X_train.reshape(-1, 100, 1)  # (샘플 수, 시퀀스 길이, 1개의 
 X_test = X_test.reshape(-1, 100, 1)
 ```
 
+<br><br><br>
 
 ### 하이퍼파라미터 튜닝 모델 정의
 ```py
@@ -213,6 +312,7 @@ def build_model(hp):  # hp: 하이퍼파라미터를 조정할 수 있게 해주
 
 - 튜닝 도구: Keras Tuner의 RandomSearch
 
+<br><br><br>
 
 ### 튜닝 및 학습 실행
 ```py
@@ -228,6 +328,8 @@ best_model = tuner.get_best_models(1)[0]
 # 최적 모델로 학습 수행
 best_model.fit(...)
 ```
+
+<br><br><br>
 
 ### 예측 및 시각화
 ```py
@@ -258,6 +360,8 @@ for i in range(100):  # 100일치 예측 반복
 
 1번 코드(시계열 분류 모델) 기반으로 매수/매도 이진 분류 코드 작성
 
+<br><br><br>
+
 ### 이진 분류 LSTM 모델
 ```py
 import numpy as np
@@ -282,6 +386,8 @@ scaler = MinMaxScaler(feature_range=(0, 1))
 close_scaled = scaler.fit_transform(close_prices)
 ```
 
+<br><br><br>
+
 ### 데이터셋 구성 함수 (입력 시퀀스와 레이블 만들기) 
 ```py
 def create_binary_dataset(dataset, time_step=30):
@@ -299,7 +405,8 @@ def create_binary_dataset(dataset, time_step=30):
 
 - y_data: 다음날 종가가 오늘보다 오르면 1(매수), 아니면 0(매도)
 
-  
+<br><br><br>
+
 ### 모델 입력 데이터 만들기
 ```py
 time_step = 30
@@ -312,6 +419,8 @@ X = X.reshape(X.shape[0], X.shape[1], 1)  # (샘플수, 타임스텝, 1)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 ```
 
+<br><br><br>
+
 ### LSTM 분류 모델 만들기
 ```py
 model = Sequential()
@@ -323,6 +432,7 @@ model.add(Dense(1, activation='sigmoid'))  # 이진 분류 (확률 출력)
 model.compile(loss=BinaryCrossentropy(), optimizer=Adam(0.001), metrics=['accuracy'])
 ```
 
+<br><br><br>
 
 ### 모델 학습
 ```py
@@ -334,6 +444,7 @@ history = model.fit(X_train, y_train, epochs=30, batch_size=32, validation_data=
 
 - validation_data: 테스트 정확도도 같이 확인
 
+<br><br><br>
 
 ### 모델 평가 및 예측 결과 확인
 ```py
@@ -349,7 +460,7 @@ print(f"Test Accuracy: {accuracy:.4f}")
 
 ```
 
-
+<br><br><br>
 
 ### 예측 결과 시각화
 ```py
@@ -390,6 +501,7 @@ Buy, Sell, Hold로 3분류 모델
 
 - 2 (Sell) : 종가가 0.5% 이상 하락
 
+<br><br><br>
 
 ### 데이터셋 구성 함수 (3분류로 변경)
 ```py
@@ -415,6 +527,7 @@ def create_triple_class_dataset(dataset, time_step=30, threshold=0.005):
 
 ```
 
+<br><br><br>
 
 ### 데이터 준비
 ```py
@@ -428,6 +541,8 @@ from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=False, test_size=0.2)
 
 ```
+
+<br><br><br>
 
 ### LSTM 3분류 모델 만들기
 ```py
@@ -448,6 +563,8 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 model.fit(X_train, y_train_cat, epochs=30, batch_size=32, validation_data=(X_test, y_test_cat))
 
 ```
+
+<br><br><br>
 
 ### 예측 및 평가 (정밀도, 재현율, F1 score)
 ```py
