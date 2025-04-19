@@ -8,6 +8,8 @@
 | 학습 속도 | 빠름 | 느림 (많은 연산량 필요) |
 | 대표 알고리즘 | SVM, KNN, 의사결정나무 등 | CNN, RNN, LSTM, Transformer 등 |
 
+target은 prediction이 맞춰야 할 정답이고 epoch은 학습의 횟수를 가리킨다.
+
 <br><br><br>
 
 ---
